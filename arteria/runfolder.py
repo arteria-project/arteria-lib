@@ -1,6 +1,11 @@
 import time
 import os.path
 import requests
+import json
+
+class HostProvider:
+    def host(self):
+        return "localhost"
 
 class Logger:
 
@@ -35,12 +40,10 @@ class WorkflowService:
                     .format(url, resp.status_code))
         return resp.status_code
 
-class FilesystemService():
-
-    def exists(self, path):
-        return os.path.isfile(path)
-
 class ConfigurationService():
+    # TODO: Have this get from yaml file
+    def runfolder_service_port(self):
+        return 10800
 
     def runfolder_ready_webhook(self):
         return "http://google.com"
@@ -50,30 +53,48 @@ class ConfigurationService():
         return 10
 
     def monitored_directories(self, host):
-        print "monitored_directories"
-        mountpoints = [
-            "/home/stanley/arteria/monitored/mon1",
-            "/home/stanley/arteria/monitored/mon2" 
-        ]
-        return mountpoints
+        # TODO: get from yaml
+        return ["/var/local/arteria/mon1", "/var/local/arteria/mon2"]
+
+class RunfolderInfo():
+    """Information about a runfolder. Status can be:
+            none: Not ready for processing or invalid
+            ready: Ready for processing by Arteria
+            started: Arteria started processing the runfolder
+            done: Arteria is done processing the runfolder
+            error: Arteria started processing the runfolder but there was an error
+    """
+
+    STATE_NONE    = "none"
+    STATE_READY   = "ready"
+    STATE_STARTED = "started"
+    STATE_DONE    = "done"
+    STATE_ERROR   = "error"
+
+    def __init__(self, host, path, state):
+        self.host = host
+        self.path = path
+        self.state = state 
 
 # TODO: The filename will be changed to something else
 class RunfolderMonitor():
     """Watches a set of directories on the server and reacts when one of them 
        has a runfolder that's ready for processing"""
 
-    def __init__(self, host, workflow_service, configuration_service, 
-                 filesystem_service, logger):
+    def __init__(self, 
+                 workflow_svc=None, 
+                 configuration_svc=ConfigurationService(), 
+                 host_provider=HostProvider(),
+                 logger=Logger()):
         self._logger = logger
-        self._workflow_service = workflow_service
-        self._configuration_service = configuration_service
-        self._host = host
-        self._filesystem_service = filesystem_service
+        self._workflow_svc = workflow_svc
+        self._configuration_svc = configuration_svc
+        self._host_provider = host_provider
 
     def run_scheduler(self):
         """Starts the runfolder thread, executing the monitor regularly"""
         self._logger.info("Running the runfolder scheduler.")
-        sleep_interval = self._configuration_service.runfolder_heartbeat()
+        sleep_interval = self._configuration_svc.runfolder_heartbeat()
         while True:
             self.monitor()
             sleep(sleep_interval)
@@ -83,22 +104,84 @@ class RunfolderMonitor():
         self._logger.debug("monitor")
         self.get_available_runfolder()
 
-    def is_runfolder_ready(self, directory):
-        already_processed_marker = os.path.join(directory, ".arteria/state")
-        already_processed = self._filesystem_service.exists(already_processed_marker)
-        complete_marker = os.path.join(directory, "RTAComplete.txt")
-        completed = self._filesystem_service.exists(complete_marker)
+    def _file_exists(self, path):
+        return os.path.isfile(path)
+
+    def _dir_exists(self, path):
+        return os.path.isdir(path)
+
+    def get_by_path(self, path):
+        self._logger.debug("get_by_path")
+        # TODO: Validate that the path is actually being monitored
+        if not self._dir_exists(path):
+            raise Exception("Directory does not exist: '{0}'".format(path)) 
+        info = RunfolderInfo("host", path, self.get_runfolder_state(path)) 
+        return info
         
-        return (not already_processed and completed)
+    def _get_runfolder_state_from_state_file(self, runfolder):
+        state_file = os.path.join(runfolder, ".arteria/state")
+        if self._file_exists(state_file):
+            with open(state_file, 'r') as f:
+                state = f.read()
+                return state
+        else:
+            return RunfolderInfo.STATE_NONE
+
+    def get_runfolder_state(self, runfolder):
+        state = self._get_runfolder_state_from_state_file(runfolder)  
+
+        # If there exists a state file, it will control the state
+        if state == RunfolderInfo.STATE_NONE:
+            completed_marker = os.path.join(runfolder, "RTAComplete.txt")
+            ready = self._file_exists(completed_marker)
+            if ready:
+                state = RunfolderInfo.STATE_READY 
+
+        return state
+
+    def set_runfolder_state(self, runfolder, state):
+        arteria_dir = os.path.join(runfolder, ".arteria")
+        state_file = os.path.join(arteria_dir, "state")
+        if not os.path.exists(arteria_dir):
+            os.makedirs(arteria_dir)
+        with open(state_file, 'w') as f:
+            f.write(state)
+        
+    def is_runfolder_ready(self, directory):
+        state = self.get_runfolder_state(directory)
+        self._logger.debug("Checking {0}. state={1}".format(directory, state))
+        return state == RunfolderInfo.STATE_READY
 
     def _monitored_directories(self):
-        return self._configuration_service.monitored_directories(self._host)
+        return self._configuration_svc.monitored_directories(self._host_provider.host())
+
+    def next_runfolder(self, requestip):
+        """Pulls for available run folders"""
+        self._logger.info("Pulling for available runfolders from {0}"
+                          .format(requestip))
+        available = self.get_available_runfolder()
+        try:
+            return available.next()
+        except StopIteration:
+            return None
+
+    def list_runfolders(self, requestip):
+        """Pulls for available run folders"""
+        self._logger.info("Pulling for available runfolders from {0}"
+                          .format(requestip))
+        return self.get_available_runfolder()
 
     def get_available_runfolder(self):
         """Checks for an available runfolder on the host"""
         self._logger.debug("get_available_runfolder")
-        for directory in self._monitored_directories():
-            self._logger.debug("Checking {0}".format(directory))
-            if self.is_runfolder_ready(directory):
-                self._logger.debug("Runfolder is ready, pinging workflow service")
-                self._workflow_service.runfolder_ready(self._host, directory)
+        for monitored_root in self._monitored_directories():
+            self._logger.debug("Checking subdirectories of {0}".format(monitored_root))
+            for subdir in os.listdir(monitored_root):
+                directory = os.path.join(monitored_root, subdir)
+                self._logger.debug("Found potential runfolder {0}".format(directory))
+                if self.is_runfolder_ready(directory):
+                    info = RunfolderInfo(self._host_provider.host(),
+                                         directory, RunfolderInfo.STATE_READY)
+                    yield info
+
+        self._logger.debug("Done walking {0}".format(monitored_root))

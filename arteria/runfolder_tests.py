@@ -2,13 +2,6 @@ import unittest
 from runfolder import * 
 from mock import MagicMock, call
 
-class DummyLogger:
-    def debug(self, msg):
-        print msg
-
-    def info(self, msg):
-        print msg
-
 class RunfolderMonitorTestCase(unittest.TestCase):
     
     def _valid_runfolder(self, path):
@@ -20,8 +13,7 @@ class RunfolderMonitorTestCase(unittest.TestCase):
             raise Exception("Unexpected path")
 
     def test_runfolderavailable_valid_response(self):
-        
-        logger = DummyLogger()
+        logger = Logger()
         configuration_svc = ConfigurationService()
         workflow_svc = WorkflowService(configuration_svc, logger)
         runfolder_ready = MagicMock()
