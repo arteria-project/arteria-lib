@@ -1,5 +1,5 @@
 import unittest
-from runfolder import * 
+from arteria.runfolder import * 
 from mock import MagicMock, call
 
 class RunfolderMonitorTestCase(unittest.TestCase):
