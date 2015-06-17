@@ -53,7 +53,12 @@ class RunfolderService():
 
     def get_by_path(self, path):
         self._logger.debug("get_by_path")
-        # TODO: Validate that the path is actually being monitored
+
+        # validate that this is a subdirectory of a monitored path:
+        monitored = any([path.startswith(mon) for mon in self._monitored_directories()])
+        if not monitored:
+            raise Exception("The path {0} is not being monitored".format(path))
+
         if not self._dir_exists(path):
             raise Exception("Directory does not exist: '{0}'".format(path)) 
         info = RunfolderInfo(self._host(), path, self.get_runfolder_state(path)) 
@@ -119,3 +124,4 @@ class RunfolderService():
                     yield info
 
         self._logger.debug("Done walking {0}".format(monitored_root))
+

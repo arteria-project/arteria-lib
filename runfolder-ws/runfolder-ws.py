@@ -17,8 +17,11 @@ class BaseHandler(tornado.web.RequestHandler):
         runfolder_info.link = self.create_runfolder_link(runfolder_info.path) 
 
     def create_runfolder_link(self, path):
-        return "%s://%s/api/1.0/runfolders/path%s" % (
-               self.request.protocol, self.request.host, path)
+        return "%s/runfolders/path%s" % (
+               self.api_link(), path)
+
+    def api_link(self, version="1.0"):
+        return "%s://%s/api/%s" % (self.request.protocol, self.request.host, version) 
 
 class ListAvailableRunfoldersHandler(BaseHandler):
     def get(self):
@@ -52,8 +55,25 @@ class RunfolderHandler(BaseHandler):
         monitor = runfolder.RunfolderService()
         monitor.set_runfolder_state(path, "TODO")
 
+class ApiHelpEntry():
+    def __init__(self, link, description):
+        self.link = self.prefix + link
+        self.description = description 
+
+class ApiHelpHandler(BaseHandler):
+    def get(self):
+        ApiHelpEntry.prefix = self.api_link() 
+        doc = [ 
+            ApiHelpEntry("/runfolders/list", "Lists all runfolders"),
+            ApiHelpEntry("/runfolders/next", "Return next runfolder to process"),
+            ApiHelpEntry("/runfolders/path/fullpathhere", 
+                         "Returns information about the runfolder at the path. The path must be monitored"),
+        ]
+        self.write_object(doc)
+
 def create_app(debug):
     app = tornado.web.Application([
+            (r"/api/1.0", ApiHelpHandler),
             (r"/api/1.0/runfolders/list", ListAvailableRunfoldersHandler),
             (r"/api/1.0/runfolders/next", NextAvailableRunfolderHandler),
             (r"/api/1.0/runfolders/path(/.*)", RunfolderHandler),
