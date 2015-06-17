@@ -22,8 +22,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class ListAvailableRunfoldersHandler(BaseHandler):
     def get(self):
-        monitor = runfolder.RunfolderMonitor()
-        runfolder_infos = list(monitor.list_runfolders(self.request.remote_ip))
+        monitor = runfolder.RunfolderService()
+        runfolder_infos = list(monitor.list_available_runfolders())
         for runfolder_info in runfolder_infos:
             self.append_runfolder_link(runfolder_info)
 
@@ -31,8 +31,8 @@ class ListAvailableRunfoldersHandler(BaseHandler):
 
 class NextAvailableRunfolderHandler(BaseHandler):
     def get(self):
-        monitor = runfolder.RunfolderMonitor()
-        runfolder_info = monitor.next_runfolder(self.request.remote_ip)
+        monitor = runfolder.RunfolderService()
+        runfolder_info = monitor.next_runfolder()
         self.append_runfolder_link(runfolder_info)
         self.write_object(runfolder_info)
 
@@ -41,15 +41,14 @@ class RunfolderHandler(BaseHandler):
     def get(self, path):
         logger = runfolder.Logger()
         logger.debug("get " + path)
-        # TODO: Rename the monitor class to something more general 
-        monitor = runfolder.RunfolderMonitor()
+        monitor = runfolder.RunfolderService()
         ret = monitor.get_by_path(path)
         self.write_object(ret)
 
     def post(self, path):
         logger = runfolder.Logger()
         logger.debug("post " + path)
-        monitor = runfolder.RunfolderMonitor()
+        monitor = runfolder.RunfolderService()
         monitor.set_runfolder_state(path, "TODO")
 
 def create_app(debug):

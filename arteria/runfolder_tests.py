@@ -12,23 +12,50 @@ class RunfolderMonitorTestCase(unittest.TestCase):
         else:
             raise Exception("Unexpected path")
 
-    def test_runfolderavailable_valid_response(self):
+        
+
+    def test_list_available_runfolders(self):
+        # Setup
         logger = Logger()
         configuration_svc = ConfigurationService()
-        workflow_svc = WorkflowService(configuration_svc, logger)
-        runfolder_ready = MagicMock()
-        workflow_svc.runfolder_ready = runfolder_ready 
-        filesystem_svc = FilesystemService()
-        filesystem_svc.exists = self._valid_runfolder
+        host_provider = HostProvider()
+        runfolder_svc = RunfolderService(configuration_svc,
+            host_provider, logger)
 
-        runfolder_monitor = RunfolderMonitor("localhost", workflow_svc,
-            configuration_svc, filesystem_svc, logger)
-        runfolder_monitor.monitor()
+        runfolder_svc._file_exists = self._valid_runfolder
 
-        expected_calls = [call('localhost', '/home/stanley/arteria/monitored/mon1'), 
-                          call('localhost', '/home/stanley/arteria/monitored/mon2')]
+        def _subdirectories(path):
+            return ["runfolder001"]
+        runfolder_svc._subdirectories = _subdirectories
 
-        runfolder_ready.assert_has_calls(expected_calls)
+        # Test 
+        runfolders = runfolder_svc.list_available_runfolders()
+        runfolders = list(runfolders)
+        self.assertEqual(len(runfolders), 2)
+
+        runfolders_str = sorted([str(runfolder) for runfolder in runfolders])
+        expected = ["ready: /var/local/arteria/mon1/runfolder001@localhost", 
+                    "ready: /var/local/arteria/mon2/runfolder001@localhost"]
+        self.assertEqual(runfolders_str, expected)
+
+    def test_next_runfolder(self):
+        # Setup
+        logger = Logger()
+        configuration_svc = ConfigurationService()
+        host_provider = HostProvider()
+        runfolder_svc = RunfolderService(configuration_svc,
+            host_provider, logger)
+
+        runfolder_svc._file_exists = self._valid_runfolder
+
+        def _subdirectories(path):
+            return ["runfolder001"]
+        runfolder_svc._subdirectories = _subdirectories
+
+        # Test 
+        runfolder = runfolder_svc.next_runfolder()
+        expected = "ready: /var/local/arteria/mon1/runfolder001@localhost"
+        self.assertEqual(str(runfolder), expected)
 
 if __name__ == '__main__':
     unittest.main()

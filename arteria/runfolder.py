@@ -76,39 +76,29 @@ class RunfolderInfo():
         self.path = path
         self.state = state 
 
-# TODO: The filename will be changed to something else
-class RunfolderMonitor():
+    def __str__(self):
+        return "{0}: {1}@{2}".format(self.state, self.path, self.host)
+
+class RunfolderService():
     """Watches a set of directories on the server and reacts when one of them 
        has a runfolder that's ready for processing"""
 
     def __init__(self, 
-                 workflow_svc=None, 
                  configuration_svc=ConfigurationService(), 
                  host_provider=HostProvider(),
                  logger=Logger()):
-        self._logger = logger
-        self._workflow_svc = workflow_svc
         self._configuration_svc = configuration_svc
         self._host_provider = host_provider
-
-    def run_scheduler(self):
-        """Starts the runfolder thread, executing the monitor regularly"""
-        self._logger.info("Running the runfolder scheduler.")
-        sleep_interval = self._configuration_svc.runfolder_heartbeat()
-        while True:
-            self.monitor()
-            sleep(sleep_interval)
-
-    def monitor(self):
-        """Checks if the runfolder is ready, and if so, pings the workflow service"""
-        self._logger.debug("monitor")
-        self.get_available_runfolder()
+        self._logger = logger
 
     def _file_exists(self, path):
         return os.path.isfile(path)
 
     def _dir_exists(self, path):
         return os.path.isdir(path)
+
+    def _subdirectories(self, path):
+        return os.listdir(path)
 
     def get_by_path(self, path):
         self._logger.debug("get_by_path")
@@ -128,9 +118,9 @@ class RunfolderMonitor():
             return RunfolderInfo.STATE_NONE
 
     def get_runfolder_state(self, runfolder):
+        # If there exists a state file, it defines the state, otherwise
+        # it's the existence of a marker from a sequencer
         state = self._get_runfolder_state_from_state_file(runfolder)  
-
-        # If there exists a state file, it will control the state
         if state == RunfolderInfo.STATE_NONE:
             completed_marker = os.path.join(runfolder, "RTAComplete.txt")
             ready = self._file_exists(completed_marker)
@@ -155,28 +145,21 @@ class RunfolderMonitor():
     def _monitored_directories(self):
         return self._configuration_svc.monitored_directories(self._host_provider.host())
 
-    def next_runfolder(self, requestip):
+    def next_runfolder(self):
         """Pulls for available run folders"""
-        self._logger.info("Pulling for available runfolders from {0}"
-                          .format(requestip))
-        available = self.get_available_runfolder()
+        self._logger.info("Searching for next available runfolder")
+        available = self.list_available_runfolders()
         try:
             return available.next()
         except StopIteration:
             return None
 
-    def list_runfolders(self, requestip):
-        """Pulls for available run folders"""
-        self._logger.info("Pulling for available runfolders from {0}"
-                          .format(requestip))
-        return self.get_available_runfolder()
-
-    def get_available_runfolder(self):
-        """Checks for an available runfolder on the host"""
+    def list_available_runfolders(self):
+        """Lists all the available runfolders on the host"""
         self._logger.debug("get_available_runfolder")
         for monitored_root in self._monitored_directories():
             self._logger.debug("Checking subdirectories of {0}".format(monitored_root))
-            for subdir in os.listdir(monitored_root):
+            for subdir in self._subdirectories(monitored_root):
                 directory = os.path.join(monitored_root, subdir)
                 self._logger.debug("Found potential runfolder {0}".format(directory))
                 if self.is_runfolder_ready(directory):
