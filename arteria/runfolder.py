@@ -69,6 +69,7 @@ class RunfolderService():
         if self._file_exists(state_file):
             with open(state_file, 'r') as f:
                 state = f.read()
+                state = state.strip()
                 return state
         else:
             return RunfolderInfo.STATE_NONE
@@ -124,4 +125,3 @@ class RunfolderService():
                     yield info
 
         self._logger.debug("Done walking {0}".format(monitored_root))
-

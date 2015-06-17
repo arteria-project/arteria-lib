@@ -64,7 +64,7 @@ class ApiHelpHandler(BaseHandler):
     def get(self):
         ApiHelpEntry.prefix = self.api_link() 
         doc = [ 
-            ApiHelpEntry("/runfolders/list", "Lists all runfolders"),
+            ApiHelpEntry("/runfolders", "Lists all runfolders"),
             ApiHelpEntry("/runfolders/next", "Return next runfolder to process"),
             ApiHelpEntry("/runfolders/path/fullpathhere", 
                          "Returns information about the runfolder at the path. The path must be monitored"),
@@ -74,7 +74,7 @@ class ApiHelpHandler(BaseHandler):
 def create_app(debug):
     app = tornado.web.Application([
             (r"/api/1.0", ApiHelpHandler),
-            (r"/api/1.0/runfolders/list", ListAvailableRunfoldersHandler),
+            (r"/api/1.0/runfolders", ListAvailableRunfoldersHandler),
             (r"/api/1.0/runfolders/next", NextAvailableRunfolderHandler),
             (r"/api/1.0/runfolders/path(/.*)", RunfolderHandler),
         ],
