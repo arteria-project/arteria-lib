@@ -1,7 +1,11 @@
+import sys
+import os
+import jsonpickle
+
 class ConfigurationService():
 
     def __init__(self):
-        pass
+        self._config_file = ConfigurationFile.read("runfolder.config")
 
     # TODO: Have this get from yaml file
     def runfolder_service_port(self):
@@ -15,7 +19,22 @@ class ConfigurationService():
         return 10
 
     def monitored_directories(self, host):
-        #self._logger.debug("Fetching monitored_directories from config")        
-        # TODO: get from yaml
-        return ["/var/local/arteria/mon1", "/var/local/arteria/mon2"]
+        return self._config_file.monitored_directories
 
+
+class ConfigurationFile():
+    def __init__(self, monitored_directories):
+        self.monitored_directories = monitored_directories
+
+    @staticmethod
+    def read(path):
+        with open(path, 'r') as f:
+            json = f.read()
+            return jsonpickle.decode(json)
+
+    @staticmethod
+    def write(path, obj):
+        jsonpickle.set_encoder_options('simplejson', sort_keys=True, indent=4)
+        with open(path, 'w') as f:
+            json = jsonpickle.encode(obj)
+            f.write(json)

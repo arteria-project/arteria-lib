@@ -42,8 +42,9 @@ class RunfolderHandler(BaseHandler):
         logger = runfolder.Logger()
         logger.debug("get " + path)
         monitor = runfolder.RunfolderService()
-        ret = monitor.get_by_path(path)
-        self.write_object(ret)
+        runfolder_info = monitor.get_by_path(path)
+        self.append_runfolder_link(runfolder_info)
+        self.write_object(runfolder_info)
 
     def post(self, path):
         logger = runfolder.Logger()
@@ -68,10 +69,9 @@ if __name__ == "__main__":
 
     logger = runfolder.Logger()
     configuration_svc = runfolder.ConfigurationService()
-    host_provider = runfolder.HostProvider()
     port = configuration_svc.runfolder_service_port() 
-    logger.info("Starting the runfolder micro service on {0}:{1} (debug={2})"
-                .format(host_provider.host(), port, debug))
+    logger.info("Starting the runfolder micro service on {0} (debug={1})"
+                .format(port, debug))
     app = create_app(debug)
     app.listen(port)
     tornado.ioloop.IOLoop.current().start()

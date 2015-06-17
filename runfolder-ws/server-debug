@@ -1,1 +1,1 @@
-python ./runfolder-service.py debug  
+python ./runfolder-ws.py debug  

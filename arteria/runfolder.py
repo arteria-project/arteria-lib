@@ -3,6 +3,8 @@ import os.path
 import requests
 from arteria.configuration import ConfigurationService  
 from arteria.logging import Logger
+import jsonpickle
+import socket
 
 class RunfolderInfo():
     """Information about a runfolder. Status can be:
@@ -38,7 +40,7 @@ class RunfolderService():
         self._logger = logger
 
     def _host(self):
-        return "localhost"
+        return socket.gethostname()
 
     def _file_exists(self, path):
         return os.path.isfile(path)
@@ -54,7 +56,7 @@ class RunfolderService():
         # TODO: Validate that the path is actually being monitored
         if not self._dir_exists(path):
             raise Exception("Directory does not exist: '{0}'".format(path)) 
-        info = RunfolderInfo("host", path, self.get_runfolder_state(path)) 
+        info = RunfolderInfo(self._host(), path, self.get_runfolder_state(path)) 
         return info
         
     def _get_runfolder_state_from_state_file(self, runfolder):
