@@ -1,59 +1,8 @@
 import time
 import os.path
 import requests
-
-class HostProvider:
-    def host(self):
-        return "localhost"
-
-class Logger:
-
-    def debug(self, msg):
-        print msg 
-
-    def info(self, msg):
-        print msg
-
-    def warn(self, msg):
-        print msg
-
-    def error(self, msg):
-        print msg
-
-class WorkflowService:
-    """Represents the workflow service that will do work on the runfolder"""
-
-    def __init__(self, configuration_svc, logger):
-        self._configuration_svc = configuration_svc
-        self._logger = logger        
-
-    def runfolder_ready(self, host, directory):
-        self._logger.info("runfolder_ready called for {0}@{1}".format(host, directory))
-        url = self._configuration_svc.runfolder_ready_webhook()
-        resp = requests.get(url)
-        if resp.status_code == 200:
-            self._logger.info("Successfully pushed runfolder_ready signal to workflow service")
-        else:
-            self._logger.error(
-                "Not able to push runfolder_ready signal to workflow service at {0}. Exit code {1}"
-                    .format(url, resp.status_code))
-        return resp.status_code
-
-class ConfigurationService():
-    # TODO: Have this get from yaml file
-    def runfolder_service_port(self):
-        return 10800
-
-    def runfolder_ready_webhook(self):
-        return "http://google.com"
-
-    def runfolder_heartbeat(self):
-        """The time to wait in seconds between invidual monitor runs"""
-        return 10
-
-    def monitored_directories(self, host):
-        # TODO: get from yaml
-        return ["/var/local/arteria/mon1", "/var/local/arteria/mon2"]
+from arteria.configuration import ConfigurationService  
+from arteria.logging import Logger
 
 class RunfolderInfo():
     """Information about a runfolder. Status can be:
@@ -84,11 +33,12 @@ class RunfolderService():
 
     def __init__(self, 
                  configuration_svc=ConfigurationService(), 
-                 host_provider=HostProvider(),
                  logger=Logger()):
         self._configuration_svc = configuration_svc
-        self._host_provider = host_provider
         self._logger = logger
+
+    def _host(self):
+        return "localhost"
 
     def _file_exists(self, path):
         return os.path.isfile(path)
@@ -142,7 +92,7 @@ class RunfolderService():
         return state == RunfolderInfo.STATE_READY
 
     def _monitored_directories(self):
-        return self._configuration_svc.monitored_directories(self._host_provider.host())
+        return self._configuration_svc.monitored_directories(self._host())
 
     def next_runfolder(self):
         """Pulls for available run folders"""
@@ -162,7 +112,7 @@ class RunfolderService():
                 directory = os.path.join(monitored_root, subdir)
                 self._logger.debug("Found potential runfolder {0}".format(directory))
                 if self.is_runfolder_ready(directory):
-                    info = RunfolderInfo(self._host_provider.host(),
+                    info = RunfolderInfo(self._host(),
                                          directory, RunfolderInfo.STATE_READY)
                     yield info
 

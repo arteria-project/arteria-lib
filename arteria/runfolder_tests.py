@@ -1,5 +1,5 @@
 import unittest
-from arteria.runfolder import * 
+from runfolder import * 
 from mock import MagicMock, call
 
 class RunfolderMonitorTestCase(unittest.TestCase):
@@ -12,11 +12,15 @@ class RunfolderMonitorTestCase(unittest.TestCase):
         else:
             raise Exception("Unexpected path")
 
+        
+
     def test_list_available_runfolders(self):
         # Setup
         logger = Logger()
         configuration_svc = ConfigurationService()
-        runfolder_svc = RunfolderService(configuration_svc, logger)
+        host_provider = HostProvider()
+        runfolder_svc = RunfolderService(configuration_svc,
+            host_provider, logger)
 
         runfolder_svc._file_exists = self._valid_runfolder
 
@@ -38,7 +42,9 @@ class RunfolderMonitorTestCase(unittest.TestCase):
         # Setup
         logger = Logger()
         configuration_svc = ConfigurationService()
-        runfolder_svc = RunfolderService(configuration_svc, logger)
+        host_provider = HostProvider()
+        runfolder_svc = RunfolderService(configuration_svc,
+            host_provider, logger)
 
         runfolder_svc._file_exists = self._valid_runfolder
 
