@@ -1,7 +1,6 @@
 import time
 import os.path
 import requests
-import json
 
 class HostProvider:
     def host(self):

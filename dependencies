@@ -1,2 +1,2 @@
-pip install pytest
 pip install tornado
+pip install jsonpickle 
