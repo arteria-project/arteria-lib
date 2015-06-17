@@ -23,6 +23,7 @@ class RunfolderMonitorTestCase(unittest.TestCase):
         def _subdirectories(path):
             return ["runfolder001"]
         runfolder_svc._subdirectories = _subdirectories
+        runfolder_svc._host = lambda: "localhost"
 
         # Test 
         runfolders = runfolder_svc.list_available_runfolders()
@@ -45,6 +46,7 @@ class RunfolderMonitorTestCase(unittest.TestCase):
         def _subdirectories(path):
             return ["runfolder001"]
         runfolder_svc._subdirectories = _subdirectories
+        runfolder_svc._host = lambda: "localhost"
 
         # Test 
         runfolder = runfolder_svc.next_runfolder()
