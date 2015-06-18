@@ -5,9 +5,16 @@ import jsonpickle
 class ConfigurationService():
 
     def __init__(self):
-        self._config_file = ConfigurationFile.read("runfolder.config")
+        self._config_loaded = False
 
-    # TODO: Have this get from yaml file
+    def _load_config_file(self, from_cache=True):
+        # TODO: Read everything from config file
+        if not self._config_loaded or not from_cache:
+            path = "/etc/opt/arteria-lib/runfolder-ws/runfolder.config"
+            self._config_file = ConfigurationFile.read(path)
+            print "Read config file from {0}".format(path)
+        self._config_loaded = True
+
     def runfolder_service_port(self):
         return 10800
 
@@ -19,6 +26,7 @@ class ConfigurationService():
         return 10
 
     def monitored_directories(self, host):
+        self._load_config_file()
         return self._config_file.monitored_directories
 
 
