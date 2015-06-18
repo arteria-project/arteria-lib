@@ -1,9 +1,8 @@
 import unittest
 from arteria.runfolder import *
-from mock import MagicMock, call
 
-class RunfolderMonitorTestCase(unittest.TestCase):
 
+class RunfolderServiceTestCase(unittest.TestCase):
     def _valid_runfolder(self, path):
         if path.endswith("RTAComplete.txt"):
             return True
@@ -17,14 +16,11 @@ class RunfolderMonitorTestCase(unittest.TestCase):
         logger = Logger()
         configuration_svc = ConfigurationService()
         configuration_svc.monitored_directories = lambda s: [
-                 "/data/testtank1/mon1", "/data/testtank1/mon2"]
+            "/data/testtank1/mon1", "/data/testtank1/mon2"]
         runfolder_svc = RunfolderService(configuration_svc, logger)
 
         runfolder_svc._file_exists = self._valid_runfolder
-
-        def _subdirectories(path):
-            return ["runfolder001"]
-        runfolder_svc._subdirectories = _subdirectories
+        runfolder_svc._subdirectories = lambda path: ["runfolder001"]
         runfolder_svc._host = lambda: "localhost"
 
         # Test
@@ -46,15 +42,14 @@ class RunfolderMonitorTestCase(unittest.TestCase):
 
         runfolder_svc._file_exists = self._valid_runfolder
 
-        def _subdirectories(path):
-            return ["runfolder001"]
-        runfolder_svc._subdirectories = _subdirectories
+        runfolder_svc._subdirectories = lambda path: ["runfolder001"]
         runfolder_svc._host = lambda: "localhost"
 
         # Test
         runfolder = runfolder_svc.next_runfolder()
         expected = "ready: /data/testtank1/mon1/runfolder001@localhost"
         self.assertEqual(str(runfolder), expected)
+
 
 if __name__ == '__main__':
     unittest.main()

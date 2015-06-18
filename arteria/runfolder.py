@@ -1,12 +1,10 @@
-import time
 import os.path
-import requests
 from arteria.configuration import ConfigurationService
 from arteria.logging import Logger
-import jsonpickle
 import socket
 
-class RunfolderInfo():
+
+class RunfolderInfo:
     """Information about a runfolder. Status can be:
             none: Not ready for processing or invalid
             ready: Ready for processing by Arteria
@@ -15,11 +13,11 @@ class RunfolderInfo():
             error: Arteria started processing the runfolder but there was an error
     """
 
-    STATE_NONE    = "none"
-    STATE_READY   = "ready"
+    STATE_NONE = "none"
+    STATE_READY = "ready"
     STATE_STARTED = "started"
-    STATE_DONE    = "done"
-    STATE_ERROR   = "error"
+    STATE_DONE = "done"
+    STATE_ERROR = "error"
 
     def __init__(self, host, path, state):
         self.host = host
@@ -29,7 +27,7 @@ class RunfolderInfo():
     def __str__(self):
         return "{0}: {1}@{2}".format(self.state, self.path, self.host)
 
-class RunfolderService():
+class RunfolderService:
     """Watches a set of directories on the server and reacts when one of them
        has a runfolder that's ready for processing"""
 
@@ -39,20 +37,29 @@ class RunfolderService():
         self._configuration_svc = configuration_svc
         self._logger = logger
 
-    def _host(self):
+    # NOTE: These methods were added so that they could be easily mocked out.
+    #       It would probably be nicer to move them inline and mock the system calls
+    #       or have them in a separate provider class required in the constructor
+    @staticmethod
+    def _host():
         return socket.gethostname()
 
-    def _file_exists(self, path):
+    @staticmethod
+    def _file_exists(path):
         return os.path.isfile(path)
 
-    def _dir_exists(self, path):
+    @staticmethod
+    def _dir_exists(path):
         return os.path.isdir(path)
 
-    def _subdirectories(self, path):
+    @staticmethod
+    def _subdirectories(path):
         return os.listdir(path)
 
-    def get_by_path(self, path):
-        self._logger.debug("get_by_path")
+    def get_runfolder_by_path(self, path):
+        """Returns a RunfolderInfo by its Linux file path"""
+
+        self._logger.debug("get_runfolder_by_path")
 
         # validate that this is a subdirectory of a monitored path:
         monitored = any([path.startswith(mon) for mon in self._monitored_directories()])
@@ -65,7 +72,9 @@ class RunfolderService():
         return info
 
     def _get_runfolder_state_from_state_file(self, runfolder):
-        state_file = os.path.join(runfolder, ".arteria/state")
+        """Reads the state in the state file at .arteria/state, returns
+        RunfolderInfo.STATE_NONE if nothing is available """
+        state_file = os.path.join(runfolder, ".arteria", "state")
         if self._file_exists(state_file):
             with open(state_file, 'r') as f:
                 state = f.read()
@@ -75,8 +84,13 @@ class RunfolderService():
             return RunfolderInfo.STATE_NONE
 
     def get_runfolder_state(self, runfolder):
-        # If there exists a state file, it defines the state, otherwise
-        # it's the existence of a marker from a sequencer
+        """Returns the state of a runfolder. The possible states are defined in
+        RunfolderInfo.STATE_*.
+
+        If the file .arteria/state exists, it will determine the state. If it doesn't
+        exist, the existence of the marker file RTAComplete.txt determines the state.
+        """
+
         state = self._get_runfolder_state_from_state_file(runfolder)
         if state == RunfolderInfo.STATE_NONE:
             completed_marker = os.path.join(runfolder, "RTAComplete.txt")
@@ -86,7 +100,10 @@ class RunfolderService():
 
         return state
 
-    def set_runfolder_state(self, runfolder, state):
+    @staticmethod
+    def set_runfolder_state(runfolder, state):
+        """Sets the state of a runfolder"""
+
         arteria_dir = os.path.join(runfolder, ".arteria")
         state_file = os.path.join(arteria_dir, "state")
         if not os.path.exists(arteria_dir):
@@ -113,13 +130,15 @@ class RunfolderService():
 
     def list_available_runfolders(self):
         """Lists all the available runfolders on the host"""
+
         self._logger.debug("get_available_runfolder")
         for monitored_root in self._monitored_directories():
             self._logger.debug("Checking subdirectories of {0}".format(monitored_root))
             for subdir in self._subdirectories(monitored_root):
                 directory = os.path.join(monitored_root, subdir)
                 self._logger.debug("Found potential runfolder {0}".format(directory))
-                if self.is_runfolder_ready(directory):
+                state = self.get_runfolder_state(directory)
+                if state == RunfolderInfo.STATE_READY:
                     info = RunfolderInfo(self._host(),
                                          directory, RunfolderInfo.STATE_READY)
                     yield info

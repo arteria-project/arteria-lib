@@ -1,8 +1,6 @@
-import sys
-import os
 import jsonpickle
 
-class ConfigurationService():
+class ConfigurationService:
 
     def __init__(self):
         self._config_loaded = False
@@ -18,19 +16,12 @@ class ConfigurationService():
     def runfolder_service_port(self):
         return 10800
 
-    def runfolder_ready_webhook(self):
-        return "http://google.com"
-
-    def runfolder_heartbeat(self):
-        """The time to wait in seconds between invidual monitor runs"""
-        return 10
-
     def monitored_directories(self, host):
         self._load_config_file()
         return self._config_file.monitored_directories
 
 
-class ConfigurationFile():
+class ConfigurationFile:
     def __init__(self, monitored_directories):
         self.monitored_directories = monitored_directories
 
@@ -42,7 +33,8 @@ class ConfigurationFile():
 
     @staticmethod
     def write(path, obj):
-        jsonpickle.set_encoder_options('simplejson', sort_keys=True, indent=4)
+        jsonpickle.set_encoder_options(
+            'simplejson', sort_keys=True, indent=4)
         with open(path, 'w') as f:
             json = jsonpickle.encode(obj)
             f.write(json)
