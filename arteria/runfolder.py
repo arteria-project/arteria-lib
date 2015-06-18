@@ -56,15 +56,39 @@ class RunfolderService:
     def _subdirectories(path):
         return os.listdir(path)
 
+    def validate_is_being_monitored(self, path):
+        """Validate that this is a subdirectory (potentially non-existing)
+         of a monitored path"""
+        monitored = any([path.startswith(mon) for mon in self._monitored_directories()])
+        if not monitored:
+            raise Exception("The path {0} is not being monitored".format(path))
+
+    def create_runfolder(self, path):
+        """Provided for integration tests only.
+        Creates a runfolder at the path."""
+        self.validate_is_being_monitored(path)
+        if os.path.exists(path):
+            raise Exception("The path {0} already exists and can't be overridden".format(path))
+        os.makedirs(path)
+
+    def add_sequencing_finished_marker(self, path):
+        """Provided for integration tests only.
+        Adds the marker that sets the `ready` state of a runfolder.
+        This marker is generally added by the sequencer"""
+        if not os.path.isdir(path):
+            raise Exception("The path '{0}' is not an existing directory".format(path))
+
+        fullpath = os.path.join(path, "RTAComplete.txt")
+        if os.path.isfile(fullpath):
+            raise Exception("The complete marker already exists at {0}".format(fullpath))
+
+        open(fullpath, 'a').close()
+
     def get_runfolder_by_path(self, path):
         """Returns a RunfolderInfo by its Linux file path"""
 
         self._logger.debug("get_runfolder_by_path")
-
-        # validate that this is a subdirectory of a monitored path:
-        monitored = any([path.startswith(mon) for mon in self._monitored_directories()])
-        if not monitored:
-            raise Exception("The path {0} is not being monitored".format(path))
+        self.validate_is_being_monitored()
 
         if not self._dir_exists(path):
             raise Exception("Directory does not exist: '{0}'".format(path))
