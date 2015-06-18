@@ -1,1 +1,3 @@
+folder=$(dirname $0)
+cd $folder
 python ./runfolder-ws.py debug  

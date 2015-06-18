@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-monitored_base=/var/local/arteria
+monitored_base=/data/testtank1
 # For now, we just create everything in the first mon folder:
 basefolder=$monitored_base/mon1
 runfolder="$basefolder/runfolder_$(date +%s)"
