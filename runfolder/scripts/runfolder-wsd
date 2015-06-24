@@ -1,0 +1,52 @@
+#! /bin/bash
+
+### BEGIN INIT INFO
+# Provides:          runfolder-wsd 
+# Required-Start:    $local_fs $remote_fs $network $syslog
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:
+# Short-Description: Provides a web service interface on the runfolder monitor service
+# Description: Provides a web service interface on the runfolder monitor service
+### END INIT INFO
+
+set -e
+daemon_name=`basename $0`
+log="/var/log/$daemon_name.log"
+cmd="/usr/local/bin/runfolder-ws"
+
+is_running() {
+    ps aux | grep -v grep | grep --quiet $cmd
+}
+
+case "$1" in
+
+  status)
+    if is_running; then
+            echo "Running"
+    else
+            echo "Stopped"
+            exit 1
+        fi
+        ;;
+  start)
+        echo "Attempting to start $cmd" | tee -a $log
+        $cmd & >> $log 2>> $log
+
+    if ! is_running; then
+            echo "Not able to start $cmd" | tee -a $log
+        else
+            echo "Successfully started $cmd" | tee -a $log
+        fi
+
+    ;;
+  stop|reload|restart|force-reload|status)
+        echo "Command not supported"
+    ;;
+  *)
+    echo "Usage:  {start|stop|status}" >&2
+    exit 1
+    ;;
+esac
+
+exit 0
