@@ -2,19 +2,19 @@ import jsonpickle
 
 class ConfigurationService:
 
-    def __init__(self):
+    def __init__(self, path):
         self._config_loaded = False
+        self._path = path
 
     def _load_config_file(self, from_cache=True):
-        # TODO: Read everything from config file
         if not self._config_loaded or not from_cache:
-            path = "/etc/opt/arteria-lib/runfolder-ws/runfolder.config"
-            self._config_file = ConfigurationFile.read(path)
-            print "Read config file from {0}".format(path)
+            self._config_file = ConfigurationFile.read(self._path)
+            print "Read config file from {0}".format(self._path)
         self._config_loaded = True
 
-    def runfolder_service_port(self):
-        return 10800
+    def port(self):
+        self._load_config_file()
+        return self._config_file.port
 
     def monitored_directories(self, host):
         self._load_config_file()
@@ -22,8 +22,10 @@ class ConfigurationService:
 
 
 class ConfigurationFile:
-    def __init__(self, monitored_directories):
+    """Represents a json serialized configuration file"""
+    def __init__(self, monitored_directories, port):
         self.monitored_directories = monitored_directories
+        self.port = port
 
     @staticmethod
     def read(path):
