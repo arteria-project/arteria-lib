@@ -40,7 +40,7 @@ class RunfolderService:
        has a runfolder that's ready for processing"""
 
     def __init__(self,
-                 configuration_svc=ConfigurationService(),
+                 configuration_svc,
                  logger=Logger()):
         self._configuration_svc = configuration_svc
         self._logger = logger
@@ -96,7 +96,7 @@ class RunfolderService:
         """Returns a RunfolderInfo by its Linux file path"""
 
         self._logger.debug("get_runfolder_by_path")
-        self.validate_is_being_monitored()
+        self.validate_is_being_monitored(path)
 
         if not self._dir_exists(path):
             raise Exception("Directory does not exist: '{0}'".format(path))
