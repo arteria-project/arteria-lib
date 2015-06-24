@@ -1,8 +1,9 @@
-import arteria.runfolder as runfolder
 import tornado.ioloop
 import tornado.web
 import sys
 import jsonpickle
+from .runfolder import RunfolderService, Logger
+from .configuration import ConfigurationService
 
 
 class BaseHandler(tornado.web.RequestHandler):
@@ -27,7 +28,7 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class ListAvailableRunfoldersHandler(BaseHandler):
     def get(self):
-        monitor = runfolder.RunfolderService()
+        monitor = RunfolderService()
         runfolder_infos = list(monitor.list_available_runfolders())
         for runfolder_info in runfolder_infos:
             self.append_runfolder_link(runfolder_info)
@@ -37,7 +38,7 @@ class ListAvailableRunfoldersHandler(BaseHandler):
 
 class NextAvailableRunfolderHandler(BaseHandler):
     def get(self):
-        monitor = runfolder.RunfolderService()
+        monitor = RunfolderService()
         runfolder_info = monitor.next_runfolder()
         self.append_runfolder_link(runfolder_info)
         self.write_object(runfolder_info)
@@ -47,23 +48,23 @@ class RunfolderHandler(BaseHandler):
     """Handles a particular runfolder"""
 
     def get(self, path):
-        logger = runfolder.Logger()
+        logger = Logger()
         logger.debug("get " + path)
-        monitor = runfolder.RunfolderService()
+        monitor = RunfolderService()
         runfolder_info = monitor.get_runfolder_by_path(path)
         self.append_runfolder_link(runfolder_info)
         self.write_object(runfolder_info)
 
     def post(self, path):
-        logger = runfolder.Logger()
+        logger = Logger()
         logger.debug("post " + path)
-        monitor = runfolder.RunfolderService()
+        monitor = RunfolderService()
         monitor.set_runfolder_state(path, "TODO")
 
     def put(self, path):
         """NOTE: put is provided for test purposes only. TODO: Discuss if
         it should be disabled in production"""
-        svc = runfolder.RunfolderService()
+        svc = RunfolderService()
         svc.create_runfolder(path)
 
 class ApiHelpEntry():
@@ -85,7 +86,7 @@ class ApiHelpHandler(BaseHandler):
 
 class TestFakeSequencerReadyHandler(BaseHandler):
     def put(self, path):
-        svc = runfolder.RunfolderService()
+        svc = RunfolderService()
         svc.add_sequencing_finished_marker(path)
 
 class ApiHelpEntry():
@@ -122,8 +123,8 @@ if __name__ == "__main__":
     else:
         debug = False
 
-    logger = runfolder.Logger()
-    configuration_svc = runfolder.ConfigurationService()
+    logger = Logger()
+    configuration_svc = ConfigurationService()
     port = configuration_svc.runfolder_service_port()
     logger.info("Starting the runfolder micro service on {0} (debug={1})"
                 .format(port, debug))

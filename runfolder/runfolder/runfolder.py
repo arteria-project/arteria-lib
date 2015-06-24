@@ -1,8 +1,16 @@
 import os.path
-from arteria.configuration import ConfigurationService
-from arteria.logging import Logger
+from .configuration import ConfigurationService
 import socket
 
+# TODO: Temporary - will be replaced with logging framework
+class Logger:
+    def debug(self, msg): print msg
+
+    def info(self, msg): print msg
+
+    def warn(self, msg): print msg
+
+    def error(self, msg): print msg
 
 class RunfolderInfo:
     """Information about a runfolder. Status can be:
