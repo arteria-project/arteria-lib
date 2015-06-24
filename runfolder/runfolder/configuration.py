@@ -10,22 +10,22 @@ class ConfigurationService:
         if not self._config_loaded or not from_cache:
             self._config_file = ConfigurationFile.read(self._path)
             print "Read config file from {0}".format(self._path)
+            print self._config_file
         self._config_loaded = True
 
     def port(self):
         self._load_config_file()
-        return self._config_file.port
+        return self._config_file["port"]
 
     def monitored_directories(self, host):
         self._load_config_file()
-        return self._config_file.monitored_directories
+        return self._config_file["monitored_directories"]
 
 
 class ConfigurationFile:
-    """Represents a json serialized configuration file"""
-    def __init__(self, monitored_directories, port):
-        self.monitored_directories = monitored_directories
-        self.port = port
+    """Represents a json serialized configuration file with key-value pairs"""
+    def __init__(self):
+        pass
 
     @staticmethod
     def read(path):
@@ -38,5 +38,5 @@ class ConfigurationFile:
         jsonpickle.set_encoder_options(
             'simplejson', sort_keys=True, indent=4)
         with open(path, 'w') as f:
-            json = jsonpickle.encode(obj)
+            json = jsonpickle.encode(obj, unpicklable=False)
             f.write(json)
