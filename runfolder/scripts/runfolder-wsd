@@ -22,7 +22,7 @@ fi
 cmd="$executable --config=/opt/runfolder/etc/runfolder.config $dbgflag"
 
 is_running() {
-    ps aux | grep -v grep | grep --quiet "$executable"
+    ps aux | grep -v grep | grep -v SCREEN | grep --quiet "$executable"
 }
 
 require_root() {
@@ -38,18 +38,24 @@ start() {
         exit 1
     fi
     require_root
-    echo "Attempting to start $cmd" | tee -a $log
-    $cmd & >> $log 2>> $log
+    echo "Attempting to start $cmd in screen session 'runfolder-ws'" | tee -a $log
+    screen -S runfolder-ws -d -m $cmd
 
-    if ! is_running; then
-        echo "Not able to start $cmd" | tee -a $log
-    else
-        echo "Successfully started $cmd" | tee -a $log
-    fi
+
+    for tries in {1..5}
+    do
+	if ! is_running; then
+	    echo "Service not yet started: $cmd" | tee -a $log
+	else
+	    echo "Successfully started $cmd" | tee -a $log
+            break
+	fi
+        sleep 1
+    done
 }
 
 stop() {
-    pid=$(ps aux | grep -v grep | grep "$executable" | awk '{ print $2 }')
+    pid=$(ps aux | grep -v grep | grep -v SCREEN | grep "$executable" | awk '{ print $2 }')
     if [ "$pid" == "" ]; then
         echo "The service is not running" >&2
         exit 1
