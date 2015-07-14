@@ -1,2 +1,0 @@
-sudo ln -fs /opt/arteria-lib/runfolder-ws/runfolder-ws /usr/bin/runfolder-ws
-sudo ln -fs /opt/arteria-lib/runfolder-ws/runfolder-ws.d /etc/init.d/runfolder-ws
