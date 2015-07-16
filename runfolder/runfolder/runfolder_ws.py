@@ -141,7 +141,7 @@ def start(config, debug, create_config):
 
 def _create_config(path):
     from configuration import ConfigurationFile
-    dirs = ['/data/testtank1/mon1', '/data/testtank1/mon2']
+    dirs = ['/data/testarteria1/mon1', '/data/testarteria1/mon2']
     config_file = ConfigurationFile(dirs, 10800)
     ConfigurationFile.write(path, config_file)
     print "Created default config file at {0}".format(path)
