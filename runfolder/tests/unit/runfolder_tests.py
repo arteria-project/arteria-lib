@@ -1,5 +1,5 @@
 import unittest
-from arteria.runfolder import *
+from runfolder.runfolder import *
 
 
 class RunfolderServiceTestCase(unittest.TestCase):
@@ -14,7 +14,7 @@ class RunfolderServiceTestCase(unittest.TestCase):
     def test_list_available_runfolders(self):
         # Setup
         logger = Logger()
-        configuration_svc = ConfigurationService()
+        configuration_svc = ConfigurationService("will_be_ignored")
         configuration_svc.monitored_directories = lambda s: [
             "/data/testarteria1/mon1", "/data/testarteria1/mon2"]
         runfolder_svc = RunfolderService(configuration_svc, logger)
@@ -36,7 +36,7 @@ class RunfolderServiceTestCase(unittest.TestCase):
     def test_next_runfolder(self):
         # Setup
         logger = Logger()
-        configuration_svc = ConfigurationService()
+        configuration_svc = ConfigurationService("will_be_ignored")
         configuration_svc.monitored_directories = lambda s: ["/data/testarteria1/mon1"]
         runfolder_svc = RunfolderService(configuration_svc, logger)
 
