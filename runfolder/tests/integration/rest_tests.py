@@ -4,7 +4,7 @@ import time
 import jsonpickle
 
 class RestApiTestCase(unittest.TestCase):
-    BASE_URL = "http://testtank1:10800/api/1.0"
+    BASE_URL = "http://testarteria1:10800/api/1.0"
 
     def test_basic_smoke_test(self):
         resp = requests.get(self.BASE_URL)
@@ -13,7 +13,7 @@ class RestApiTestCase(unittest.TestCase):
     def test_can_create_and_update_state(self):
         file_postfix = int(1000 * time.time())
         # Ensure that we can create a random runfolder at one of the mounpoints
-        path = "/data/testtank1/mon1/runfolder_inttest_{0}".format(file_postfix)
+        path = "/data/testarteria1/mon1/runfolder_inttest_{0}".format(file_postfix)
         print path
         # First, we want to make sure it's not there now:
         url = "{0}/runfolders/path{1}".format(self.BASE_URL, path)
