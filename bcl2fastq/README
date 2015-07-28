@@ -1,0 +1,15 @@
+A self contained (Tornado) REST service for running Illuminas bcl2fastq.
+
+Install:
+    # install the bcl2fastq_ws package and create the script bcl2fastq-ws
+    python setup.py install
+
+    # install the daemon, after this you can manage the service through
+    # etc/init.d/bcl2fastq-ws
+    install-daemon
+
+
+Notes on development:
+
+    python setup.py develop
+
