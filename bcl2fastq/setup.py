@@ -15,6 +15,6 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     entry_points={
-        'console_scripts': [ 'bcl2fastq-ws = bcl2fastq.bcl2fastq_ws:start' ]
+        'console_scripts': ['bcl2fastq-ws = bcl2fastq.app:start']
     }
 )
