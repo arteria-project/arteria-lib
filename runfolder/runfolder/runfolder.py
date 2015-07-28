@@ -1,16 +1,6 @@
 import os.path
-from .configuration import ConfigurationService
 import socket
-
-# TODO: Temporary - will be replaced with logging framework
-class Logger:
-    def debug(self, msg): print msg
-
-    def info(self, msg): print msg
-
-    def warn(self, msg): print msg
-
-    def error(self, msg): print msg
+import logging
 
 class RunfolderInfo:
     """Information about a runfolder. Status can be:
@@ -39,11 +29,9 @@ class RunfolderService:
     """Watches a set of directories on the server and reacts when one of them
        has a runfolder that's ready for processing"""
 
-    def __init__(self,
-                 configuration_svc,
-                 logger=Logger()):
+    def __init__(self, configuration_svc, logger=None):
         self._configuration_svc = configuration_svc
-        self._logger = logger
+        self._logger = logger or logging.getLogger(__name__)
 
     # NOTE: These methods were added so that they could be easily mocked out.
     #       It would probably be nicer to move them inline and mock the system calls
@@ -64,48 +52,75 @@ class RunfolderService:
     def _subdirectories(path):
         return os.listdir(path)
 
-    def validate_is_being_monitored(self, path):
-        """Validate that this is a subdirectory (potentially non-existing)
-         of a monitored path"""
+    def _validate_is_being_monitored(self, path):
+        """
+        Validate that this is a subdirectory (potentially non-existing)
+        of a monitored path
+
+        :raises PathNotMonitored
+        """
         monitored = any([path.startswith(mon) for mon in self._monitored_directories()])
         if not monitored:
-            raise Exception("The path {0} is not being monitored".format(path))
+            raise PathNotMonitored("The path {0} is not being monitored".format(path))
 
     def create_runfolder(self, path):
-        """Provided for integration tests only.
-        Creates a runfolder at the path."""
-        self.validate_is_being_monitored(path)
+        """
+        Creates a runfolder at the path.
+
+        Provided for integration tests only.
+
+        :raises PathNotMonitored
+        :raises DirectoryAlreadyExists
+        """
+        self._validate_is_being_monitored(path)
         if os.path.exists(path):
-            raise Exception("The path {0} already exists and can't be overridden".format(path))
+            raise DirectoryAlreadyExists("The path {0} already exists and can't be overridden".format(path))
         os.makedirs(path)
+        self._logger.info(
+            "Created a runfolder at {0} - intended for tests only".format(path))
 
     def add_sequencing_finished_marker(self, path):
-        """Provided for integration tests only.
+        """
         Adds the marker that sets the `ready` state of a runfolder.
-        This marker is generally added by the sequencer"""
+        This marker is generally added by the sequencer
+
+        Provided for integration tests only.
+
+        :raises DirectoryDoesNotExist
+        :raises CannotOverrideFile
+        """
         if not os.path.isdir(path):
-            raise Exception("The path '{0}' is not an existing directory".format(path))
+            raise DirectoryDoesNotExist(
+                "The path '{0}' is not an existing directory".format(path))
 
-        fullpath = os.path.join(path, "RTAComplete.txt")
-        if os.path.isfile(fullpath):
-            raise Exception("The complete marker already exists at {0}".format(fullpath))
+        full_path = os.path.join(path, "RTAComplete.txt")
+        if os.path.isfile(full_path):
+            raise CannotOverrideFile("The complete marker already exists at {0}".format(full_path))
 
-        open(fullpath, 'a').close()
+        open(full_path, 'a').close()
+        self._logger.info(
+            "Added the 'RTAComplete.txt' marker to '{0}' - intended for tests only".format(full_path))
 
     def get_runfolder_by_path(self, path):
-        """Returns a RunfolderInfo by its Linux file path"""
+        """
+        Returns a RunfolderInfo by its Linux file path
 
-        self._logger.debug("get_runfolder_by_path")
-        self.validate_is_being_monitored(path)
+        :raises PathNotMonitored
+        :raises DirectoryDoesNotExist
+        """
+        self._logger.debug("get_runfolder_by_path({0})".format(path))
+        self._validate_is_being_monitored(path)
 
         if not self._dir_exists(path):
-            raise Exception("Directory does not exist: '{0}'".format(path))
+            raise DirectoryDoesNotExist("Directory does not exist: '{0}'".format(path))
         info = RunfolderInfo(self._host(), path, self.get_runfolder_state(path))
         return info
 
     def _get_runfolder_state_from_state_file(self, runfolder):
-        """Reads the state in the state file at .arteria/state, returns
-        RunfolderInfo.STATE_NONE if nothing is available """
+        """
+        Reads the state in the state file at .arteria/state, returns
+        RunfolderInfo.STATE_NONE if nothing is available
+        """
         state_file = os.path.join(runfolder, ".arteria", "state")
         if self._file_exists(state_file):
             with open(state_file, 'r') as f:
@@ -116,26 +131,24 @@ class RunfolderService:
             return RunfolderInfo.STATE_NONE
 
     def get_runfolder_state(self, runfolder):
-        """Returns the state of a runfolder. The possible states are defined in
+        """
+        Returns the state of a runfolder. The possible states are defined in
         RunfolderInfo.STATE_*.
 
         If the file .arteria/state exists, it will determine the state. If it doesn't
         exist, the existence of the marker file RTAComplete.txt determines the state.
         """
-
         state = self._get_runfolder_state_from_state_file(runfolder)
         if state == RunfolderInfo.STATE_NONE:
             completed_marker = os.path.join(runfolder, "RTAComplete.txt")
             ready = self._file_exists(completed_marker)
             if ready:
                 state = RunfolderInfo.STATE_READY
-
         return state
 
     @staticmethod
     def set_runfolder_state(runfolder, state):
         """Sets the state of a runfolder"""
-
         arteria_dir = os.path.join(runfolder, ".arteria")
         state_file = os.path.join(arteria_dir, "state")
         if not os.path.exists(arteria_dir):
@@ -153,12 +166,15 @@ class RunfolderService:
 
     def next_runfolder(self):
         """Pulls for available run folders"""
-        self._logger.info("Searching for next available runfolder")
         available = self.list_available_runfolders()
         try:
-            return available.next()
+            first = available.next()
         except StopIteration:
-            return None
+            first = None
+
+        self._logger.info(
+            "Searching for next available runfolder, found: {0}".format(first))
+        return first
 
     def list_available_runfolders(self):
         """Lists all the available runfolders on the host"""
@@ -176,3 +192,16 @@ class RunfolderService:
                     yield info
 
         self._logger.debug("Done walking {0}".format(monitored_root))
+
+class CannotOverrideFile(Exception):
+    pass
+
+class DirectoryDoesNotExist(Exception):
+    pass
+
+class PathNotMonitored(Exception):
+    pass
+
+class DirectoryAlreadyExists(Exception):
+    pass
+
