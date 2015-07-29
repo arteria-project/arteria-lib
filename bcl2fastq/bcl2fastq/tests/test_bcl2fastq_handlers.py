@@ -11,6 +11,7 @@ class TestBcl2FastqHandlers(AsyncHTTPTestCase):
 
     API_BASE="/api/1.0"
     DUMMY_CONFIG = { "runfolder_path": "/data/biotank3/runfolders",
+                     "default_output_path": "test",
                      "bcl2fastq":
                          {"versions":
                               {"2.15.2":

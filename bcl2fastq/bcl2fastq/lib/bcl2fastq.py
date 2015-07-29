@@ -1,5 +1,6 @@
 import subprocess
 from lib.config import Config
+import os.path
 
 class Bcl2FastqConfig:
     """
@@ -17,7 +18,14 @@ class Bcl2FastqConfig:
 
         self.bcl2fastq_version = bcl2fastq_version
         self.runfolder_input = runfolder_input
-        self.output = output
+
+        if output:
+            self.output = output
+        else:
+            output_base = Config.load_config()["default_output_path"]
+            runfolder_base_name = os.path.basename(runfolder_input)
+            self.output = "{0}/{1}".format(output_base, runfolder_base_name)
+
         self.barcode_mismatches = barcode_mismatches
         self.tiles = tiles
         self.use_base_mask = use_base_mask

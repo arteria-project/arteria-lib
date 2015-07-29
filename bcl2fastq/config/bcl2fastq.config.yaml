@@ -28,5 +28,6 @@ machine_type:
 
 
 runfolder_path: /data/biotank3/runfolders
+default_output_path: /data/scratch
 
-bcl2fastq_logs_path: /var/log/bcl2fastq_logs/
+bcl2fastq_logs_path: /var/log/bcl2fastq_logs
