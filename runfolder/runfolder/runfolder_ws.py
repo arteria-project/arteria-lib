@@ -1,12 +1,18 @@
 import tornado.ioloop
 import tornado.web
 import jsonpickle
-from .runfolder import RunfolderService, Logger
+from .runfolder import *
 from .configuration import ConfigurationService
 import os
 import click
+import yaml
+import logging.config
+import logging
 
 class BaseHandler(tornado.web.RequestHandler):
+    def data_received(self, chunk):
+        pass
+
     def write_object(self, obj):
         resp = jsonpickle.encode(obj, unpicklable=False)
         self.write_json(resp)
@@ -47,16 +53,17 @@ class RunfolderHandler(BaseHandler):
     """Handles a particular runfolder"""
 
     def get(self, path):
-        logger = Logger()
-        logger.debug("get " + path)
         global runfolder_svc
-        runfolder_info = runfolder_svc.get_runfolder_by_path(path)
-        self.append_runfolder_link(runfolder_info)
-        self.write_object(runfolder_info)
+        try:
+            runfolder_info = runfolder_svc.get_runfolder_by_path(path)
+            self.append_runfolder_link(runfolder_info)
+            self.write_object(runfolder_info)
+        except PathNotMonitored:
+            raise tornado.web.HTTPError(400, "Searching an unmonitored path '{0}'".format(path))
+        except DirectoryDoesNotExist:
+            raise tornado.web.HTTPError(404, "Runfolder '{0}' does not exist".format(path))
 
     def post(self, path):
-        logger = Logger()
-        logger.debug("post " + path)
         global runfolder_svc
         runfolder_svc.set_runfolder_state(path, "TODO")
 
@@ -64,7 +71,11 @@ class RunfolderHandler(BaseHandler):
         """NOTE: put is provided for test purposes only. TODO: Discuss if
         it should be disabled in production"""
         global runfolder_svc
-        runfolder_svc.create_runfolder(path)
+        try:
+            runfolder_svc.create_runfolder(path)
+        except PathNotMonitored:
+            raise tornado.web.HTTPError("400", "Path {0} is not monitored".format(path))
+
 
 class ApiHelpEntry():
     def __init__(self, link, description):
@@ -116,11 +127,24 @@ def create_app(debug):
         debug=debug)
     return app
 
+def setup_logging(path=None, level=logging.INFO):
+    if path is None:
+        logging.basicConfig(level=level)
+    else:
+        with open(path, 'r') as f:
+            config = yaml.load(f.read())
+            print "Loaded logging config:", config
+            logging.config.dictConfig(config)
+
+
 @click.command()
 @click.option('--config', default="./runfolder.config")
+@click.option('--loggerconfig', default="./logger.config")
 @click.option('--debug/--no-debug', default=False)
 @click.option('--create_config', default="")
-def start(config, debug, create_config):
+def start(config, loggerconfig, debug, create_config):
+    setup_logging(loggerconfig)
+    logger = logging.getLogger(__name__)
     global runfolder_svc
 
     if create_config:
@@ -132,7 +156,6 @@ def start(config, debug, create_config):
 
     config_svc = ConfigurationService(config)
     runfolder_svc = RunfolderService(config_svc)
-    logger = Logger()
     logger.info("Starting the runfolder micro service on {0} (debug={1})"
                 .format(config_svc.port(), debug))
     app = create_app(debug)
