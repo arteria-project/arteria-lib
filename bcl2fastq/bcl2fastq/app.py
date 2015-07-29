@@ -13,6 +13,7 @@ from lib.config import Config
 def create_app(debug=False, auto_reload=False):
     # TODO Move routes to separate file
     app = tornado.web.Application([
+        url(r"/api/1.0", ApiHelpHandler, name="api"),
         url(r"/api/1.0/versions", VersionsHandler, name="versions"),
         url(r"/api/1.0/start/([\w_-]+)", StartHandler, name="start"),
         url(r"/api/1.0/status/(\d*)", StatusHandler, name="status"),
