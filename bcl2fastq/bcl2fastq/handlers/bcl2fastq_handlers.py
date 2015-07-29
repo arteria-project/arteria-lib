@@ -80,9 +80,6 @@ class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
 
         if "bcl2fastq_version" in request_data:
             bcl2fastq_version = request_data["bcl2fastq_version"]
-        else:
-            bcl2fastq_version = Bcl2FastqConfig.\
-                get_bcl2fastq_version_from_run_parameters(runfolder_input)
 
         if "output" in request_data:
             output = request_data["output"]

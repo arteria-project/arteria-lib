@@ -5,6 +5,8 @@ import os.path
 class Bcl2FastqConfig:
     """
     Container for configurations for bcl2fastq.
+    Should handle setting up sensible defaults for
+    values which have to be set.
     """
     def __init__(self,
                  bcl2fastq_version,
@@ -16,8 +18,13 @@ class Bcl2FastqConfig:
                  additional_args=None,
                  nbr_of_cores=None):
 
-        self.bcl2fastq_version = bcl2fastq_version
         self.runfolder_input = runfolder_input
+
+        if bcl2fastq_version:
+            self.bcl2fastq_version = bcl2fastq_version
+        else:
+            self.bcl2fastq_version = Bcl2FastqConfig.\
+                get_bcl2fastq_version_from_run_parameters(runfolder_input)
 
         if output:
             self.output = output
