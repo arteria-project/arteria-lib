@@ -88,7 +88,7 @@ class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
             output = request_data["output"]
 
         if "barcode_mismatches" in request_data:
-            output = request_data["barcode_mismatches"]
+            barcode_mismatches = request_data["barcode_mismatches"]
 
         if "tiles" in request_data:
             tiles = request_data["tiles"]
