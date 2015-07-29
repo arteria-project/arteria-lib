@@ -2,14 +2,13 @@ import tornado.ioloop
 import tornado.web
 import jsonpickle
 from .runfolder import *
+from .admin import AdminService
 from .configuration import ConfigurationService
 import os
 import click
-import yaml
-import logging.config
 import logging
 
-class BaseHandler(tornado.web.RequestHandler):
+class BaseRestHandler(tornado.web.RequestHandler):
     def data_received(self, chunk):
         pass
 
@@ -21,6 +20,18 @@ class BaseHandler(tornado.web.RequestHandler):
         self.set_header("Content-Type", "application/json")
         self.write(json)
 
+    def body_as_object(self, required_members=[]):
+        """Returns the JSON encoded body as a Python object"""
+        obj = jsonpickle.decode(self.request.body)
+        for member in required_members:
+            if member not in obj:
+                raise tornado.web.HTTPError("400", "Expecting '{0}' in JSON body".format(member))
+        return obj
+
+    def api_link(self, version="1.0"):
+        return "%s://%s/api/%s" % (self.request.protocol, self.request.host, version)
+
+class BaseRunfolderHandler(BaseRestHandler):
     def append_runfolder_link(self, runfolder_info):
         runfolder_info.link = self.create_runfolder_link(runfolder_info.path)
 
@@ -28,34 +39,42 @@ class BaseHandler(tornado.web.RequestHandler):
         return "%s/runfolders/path%s" % (
             self.api_link(), path)
 
-    def api_link(self, version="1.0"):
-        return "%s://%s/api/%s" % (self.request.protocol, self.request.host, version)
+    def initialize(self, admin_svc, runfolder_svc, config_svc):
+        self.admin_svc = admin_svc
+        self.runfolder_svc = runfolder_svc
+        self.config_svc = config_svc
 
-
-class ListAvailableRunfoldersHandler(BaseHandler):
+class ListAvailableRunfoldersHandler(BaseRunfolderHandler):
     def get(self):
-        global runfolder_svc
-        runfolder_infos = list(runfolder_svc.list_available_runfolders())
+        runfolder_infos = list(self.runfolder_svc.list_available_runfolders())
         for runfolder_info in runfolder_infos:
             self.append_runfolder_link(runfolder_info)
 
         self.write_object(runfolder_infos)
 
-
-class NextAvailableRunfolderHandler(BaseHandler):
+class NextAvailableRunfolderHandler(BaseRunfolderHandler):
     def get(self):
-        runfolder_info = runfolder_svc.next_runfolder()
+        runfolder_info = self.runfolder_svc.next_runfolder()
         self.append_runfolder_link(runfolder_info)
         self.write_object(runfolder_info)
 
+class LogLevelHandler(BaseRunfolderHandler):
+    def get(self):
+        log_level = self.admin_svc.get_log_level()
+        self.write_object({"log_level": log_level})
 
-class RunfolderHandler(BaseHandler):
+    def put(self):
+        json_body = self.body_as_object(["log_level"])
+        log_level = json_body["log_level"]
+        self.admin_svc.set_log_level(log_level)
+        self.write_object({"log_level": log_level})
+
+class RunfolderHandler(BaseRunfolderHandler):
     """Handles a particular runfolder"""
 
     def get(self, path):
-        global runfolder_svc
         try:
-            runfolder_info = runfolder_svc.get_runfolder_by_path(path)
+            runfolder_info = self.runfolder_svc.get_runfolder_by_path(path)
             self.append_runfolder_link(runfolder_info)
             self.write_object(runfolder_info)
         except PathNotMonitored:
@@ -64,78 +83,57 @@ class RunfolderHandler(BaseHandler):
             raise tornado.web.HTTPError(404, "Runfolder '{0}' does not exist".format(path))
 
     def post(self, path):
-        global runfolder_svc
-        runfolder_svc.set_runfolder_state(path, "TODO")
+        self.runfolder_svc.set_runfolder_state(path, "TODO")
 
     def put(self, path):
         """NOTE: put is provided for test purposes only. TODO: Discuss if
         it should be disabled in production"""
-        global runfolder_svc
         try:
-            runfolder_svc.create_runfolder(path)
+            self.runfolder_svc.create_runfolder(path)
         except PathNotMonitored:
             raise tornado.web.HTTPError("400", "Path {0} is not monitored".format(path))
 
 
-class ApiHelpEntry():
+class ApiHelpEntry:
     def __init__(self, link, description):
         self.link = self.prefix + link
         self.description = description
 
 
-class ApiHelpHandler(BaseHandler):
+class ApiHelpHandler(BaseRunfolderHandler):
     def get(self):
         ApiHelpEntry.prefix = self.api_link()
         doc = [
+            # TODO: Define the help with the route
             ApiHelpEntry("/runfolders", "Lists all runfolders"),
             ApiHelpEntry("/runfolders/next", "Return next runfolder to process"),
             ApiHelpEntry("/runfolders/path/fullpathhere",
                          "Returns information about the runfolder at the path. The path must be monitored"),
+            ApiHelpEntry("/admin/log_level",
+                         "Put {log_level: new_level} to update the log_level for the lifetime of the process")
         ]
         self.write_object(doc)
 
-class TestFakeSequencerReadyHandler(BaseHandler):
+class TestFakeSequencerReadyHandler(BaseRunfolderHandler):
     def put(self, path):
-        global runfolder_svc
-        runfolder_svc.add_sequencing_finished_marker(path)
+        self.runfolder_svc.add_sequencing_finished_marker(path)
 
 class ApiHelpEntry():
     def __init__(self, link, description):
         self.link = self.prefix + link
         self.description = description
 
-class ApiHelpHandler(BaseHandler):
-    def get(self):
-        ApiHelpEntry.prefix = self.api_link()
-        doc = [
-            ApiHelpEntry("/runfolders", "Lists all runfolders"),
-            ApiHelpEntry("/runfolders/next", "Return next runfolder to process"),
-            ApiHelpEntry("/runfolders/path/full_path_here",
-                         "Returns information about the runfolder at the path. The path must be monitored"),
-        ]
-        self.write_object(doc)
-
-def create_app(debug):
+def create_app(debug, args):
     app = tornado.web.Application([
-        (r"/api/1.0", ApiHelpHandler),
-        (r"/api/1.0/runfolders", ListAvailableRunfoldersHandler),
-        (r"/api/1.0/runfolders/next", NextAvailableRunfolderHandler),
-        (r"/api/1.0/runfolders/path(/.*)", RunfolderHandler),
-
-        (r"/api/1.0/runfolders/test/markasready/path(/.*)", TestFakeSequencerReadyHandler)
+        (r"/api/1.0", ApiHelpHandler, args),
+        (r"/api/1.0/runfolders", ListAvailableRunfoldersHandler, args),
+        (r"/api/1.0/runfolders/next", NextAvailableRunfolderHandler, args),
+        (r"/api/1.0/runfolders/path(/.*)", RunfolderHandler, args),
+        (r"/api/1.0/runfolders/test/markasready/path(/.*)", TestFakeSequencerReadyHandler, args),
+        (r"/api/1.0/admin/log_level", LogLevelHandler, args)
     ],
         debug=debug)
     return app
-
-def setup_logging(path=None, level=logging.INFO):
-    if path is None:
-        logging.basicConfig(level=level)
-    else:
-        with open(path, 'r') as f:
-            config = yaml.load(f.read())
-            print "Loaded logging config:", config
-            logging.config.dictConfig(config)
-
 
 @click.command()
 @click.option('--config', default="./runfolder.config")
@@ -143,10 +141,6 @@ def setup_logging(path=None, level=logging.INFO):
 @click.option('--debug/--no-debug', default=False)
 @click.option('--create_config', default="")
 def start(config, loggerconfig, debug, create_config):
-    setup_logging(loggerconfig)
-    logger = logging.getLogger(__name__)
-    global runfolder_svc
-
     if create_config:
         _create_config(create_config)
         return
@@ -154,11 +148,15 @@ def start(config, loggerconfig, debug, create_config):
     if not os.path.isfile(config):
         raise Exception("Can't open config file '{0}'".format(config))
 
+    admin_svc = AdminService(loggerconfig)
     config_svc = ConfigurationService(config)
     runfolder_svc = RunfolderService(config_svc)
+
+    logger = logging.getLogger(__name__)
     logger.info("Starting the runfolder micro service on {0} (debug={1})"
                 .format(config_svc.port(), debug))
-    app = create_app(debug)
+    args = dict(runfolder_svc=runfolder_svc, admin_svc=admin_svc, config_svc=config_svc)
+    app = create_app(debug, args)
     app.listen(config_svc.port())
     tornado.ioloop.IOLoop.current().start()
 
