@@ -12,7 +12,8 @@ class Bcl2FastqServiceMixin:
     """
     Provides bcl2fastq related services that can be mixed in.
     It will create adaptors to the runner service the first time a
-    request is made and then keep that adaptor.
+    request is made and then keep that adaptor. These adaptors are static,
+    so that only one such adaptor is created for the entire application.
     """
 
     _runner_service = None
@@ -62,6 +63,15 @@ class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
     """
 
     def create_config_from_request(self, runfolder, request_data):
+        """
+        For the specified runfolder, will look it up from the place setup in the
+        configuration, and then parse additinoal data from the request_data object.
+        This can be used to override any default setting in the resulting Bcl2FastqConfig
+        instance.
+        :param runfolder: name of the runfolder we want to create a config for
+        :param request_data: dict containing additional configurations
+        :return: an instances of Bcl2FastqConfig
+        """
 
         # TODO Make sure to escape them for sec. reasons.
         bcl2fastq_version = ""
@@ -108,6 +118,21 @@ class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
         return config
 
     def post(self, runfolder):
+        """
+        Starts a bcl2fastq for a runfolder. The input data can contain extra
+        parameters for bcl2fastq. It should be a json encoded object and
+        can contain one or more of the following parameters:
+         - bcl2fastq_version
+         - output
+         - barcode_mismatches
+         - tiles
+         - use_base_mask
+         - additional_args
+        If these are not set defaults setup in Bcl2FastqConfig will be
+        used (and those should be good enough for most cases).
+
+        :param runfolder: name of the runfolder we want to start bcl2fastq for
+        """
 
         try:
             request_data = dict()
@@ -148,6 +173,11 @@ class StatusHandler(BaseHandler, Bcl2FastqServiceMixin):
     """
 
     def get(self, job_id):
+        """
+        Get the status of the specified job_id, or if now id is given, the
+        status of all jobs.
+        :param job_id: to check status for (set to empty to get status for all)
+        """
 
         if job_id:
             status = self.runner_service().status(job_id)
@@ -163,6 +193,10 @@ class StopHandler(BaseHandler, Bcl2FastqServiceMixin):
     """
 
     def post(self, job_id):
+        """
+        Stops the job with the specified id.
+        :param job_id: of job to stop, or set to "all" to stop all jobs
+        """
         try:
             if job_id == "all":
                 self.runner_service().stop_all()

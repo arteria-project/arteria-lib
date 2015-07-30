@@ -7,6 +7,10 @@ import yaml
 
 
 class Config:
+    """
+    Configures bcl2fastq. Please note that once the config has been loaded once it will
+    not reload.
+    """
 
     CONFIG = {}
 

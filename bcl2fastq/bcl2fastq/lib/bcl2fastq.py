@@ -47,6 +47,13 @@ class Bcl2FastqConfig:
 
     @staticmethod
     def get_bcl2fastq_version_from_run_parameters(runfolder):
+        """
+        Guess which bcl2fastq version to use based on the machine type
+        specified in the runfolder meta data, and the corresponding
+        mappings in the config file.
+        :param runfolder: to get bcl2fastq version to use for
+        :return the version of bcl2fastq to use.
+        """
 
         from illuminate.metadata import InteropMetadata
         meta_data = InteropMetadata(runfolder)
@@ -91,6 +98,9 @@ class BCL2FastqRunnerFactory:
         return function
 
     def _get_binary(self, version):
+        """
+        Get the binary for the bcl2fastq version we are using.
+        """
         return self.bcl2fastq_mappings[version]["binary"]
 
     def create_bcl2fastq_runner(self, config):
@@ -119,7 +129,7 @@ class BCL2FastqRunner(object):
     def construct_command(self):
         """
         Implement this in subclass
-        :return: a command to be run by `run`
+        :return: a command to be run by `run`, or other external command runner.
         """
         raise NotImplementedError("Subclasses should implement this!")
 
