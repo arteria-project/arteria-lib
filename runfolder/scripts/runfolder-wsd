@@ -14,12 +14,14 @@
 # Execute in the /opt/runfolder virtualenv:
 source /opt/runfolder/bin/activate
 daemon_name=`basename $0`
-log="/var/log/$daemon_name.log"
+log_path="/var/log/runfolder"
+config_path="/opt/runfolder/etc"
+log="$log_path/$daemon_name.log"
 executable="/opt/runfolder/bin/runfolder-ws"
 if [ "$2" == "dev" ]; then
     dbgflag="--debug"
 fi
-cmd="$executable --config=/opt/runfolder/etc/runfolder.config $dbgflag"
+cmd="$executable --config=$config_path/runfolder.config --loggerconfig=$config_path/logger.config $dbgflag"
 
 is_running() {
     ps aux | grep -v grep | grep -v SCREEN | grep --quiet "$executable"
@@ -48,10 +50,12 @@ start() {
 	    echo "Service not yet started: $cmd" | tee -a $log
 	else
 	    echo "Successfully started $cmd" | tee -a $log
-            break
+            exit 0
 	fi
         sleep 1
     done
+
+    exit 1 # Not able to start successfully
 }
 
 stop() {

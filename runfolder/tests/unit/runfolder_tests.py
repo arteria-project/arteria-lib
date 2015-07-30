@@ -1,6 +1,7 @@
 import unittest
-from runfolder.runfolder import *
-
+import mock
+from runfolder.runfolder import RunfolderService
+from runfolder.configuration import ConfigurationService
 
 class RunfolderServiceTestCase(unittest.TestCase):
     def _valid_runfolder(self, path):
@@ -13,7 +14,7 @@ class RunfolderServiceTestCase(unittest.TestCase):
 
     def test_list_available_runfolders(self):
         # Setup
-        logger = Logger()
+        logger = mock.MagicMock()
         configuration_svc = ConfigurationService("will_be_ignored")
         configuration_svc.monitored_directories = lambda s: [
             "/data/testarteria1/mon1", "/data/testarteria1/mon2"]
@@ -35,7 +36,7 @@ class RunfolderServiceTestCase(unittest.TestCase):
 
     def test_next_runfolder(self):
         # Setup
-        logger = Logger()
+        logger = mock.MagicMock()
         configuration_svc = ConfigurationService("will_be_ignored")
         configuration_svc.monitored_directories = lambda s: ["/data/testarteria1/mon1"]
         runfolder_svc = RunfolderService(configuration_svc, logger)
@@ -49,7 +50,6 @@ class RunfolderServiceTestCase(unittest.TestCase):
         runfolder = runfolder_svc.next_runfolder()
         expected = "ready: /data/testarteria1/mon1/runfolder001@localhost"
         self.assertEqual(str(runfolder), expected)
-
 
 if __name__ == '__main__':
     unittest.main()

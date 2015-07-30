@@ -1,16 +1,17 @@
 import jsonpickle
+import logging
 
 class ConfigurationService:
 
-    def __init__(self, path):
+    def __init__(self, path, logger=None):
         self._config_loaded = False
         self._path = path
+        self._logger = logger or logging.getLogger(__name__)
 
     def _load_config_file(self, from_cache=True):
         if not self._config_loaded or not from_cache:
             self._config_file = ConfigurationFile.read(self._path)
-            print "Read config file from {0}".format(self._path)
-            print self._config_file
+            self._logger.info("Read config file from {0}".format(self._path))
         self._config_loaded = True
 
     def port(self):
