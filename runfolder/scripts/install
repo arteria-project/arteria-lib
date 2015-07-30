@@ -3,11 +3,21 @@
 
 # This requires pip and virtualenv
 
+echo "Running install as '$(id)'"
+
+if [ "$(id -u)" != "0" ]; then
+    echo "You must run this script as root" 1>&2
+    exit 1
+fi
+
 user=$1
 group=$2
 type=$3
 source=$4
 installpath=$5
+product="runfolder"
+# TODO: Take as parameter:
+logpath=/var/log/$product
 
 if [ "$user" == "" ]; then
     user="root"
@@ -26,7 +36,7 @@ if [ "$source" == "" ]; then
 fi
 
 if [ "$installpath" == "" ]; then
-    installpath="/opt/runfolder"
+    installpath="/opt/$product"
 fi
 
 echo "Installing from $source to $installpath, type=$type"
@@ -35,16 +45,22 @@ virtualenv $installpath/
 cp $source/config/runfolder.config $installpath/etc/
 chown -R $user:$user $installpath
 
+echo "Creating log directory at $logpath"
+mkdir -pv $logpath
+chown -R $user:$user $logpath
+echo "Copying default logger.config to $installpath/etc"
+cp $source/config/logger.config $installpath/etc/
+
 # activate the virtualenv
 echo "Switching to the '$installpath' virtualenv"
 source $installpath/bin/activate
 
 if [ "$type" == "dev" ]; then
-    echo "Installing the runfolder package in development mode"
+    echo "Installing the $product package in development mode"
     pip install -e file://$source -r $source/requirements/dev
 else
     # TODO: Support prod
-    echo "NOTE: Installing the runfolder package in development mode" >&2
+    echo "NOTE: Installing the $product package in development mode" >&2
     pip install -e file://$source -r $source/requirements/prod
 fi
 
@@ -60,13 +76,18 @@ else
     service runfolder-wsd restart
 fi
 
+if [ "$?" != "0" ]; then
+    echo "Not able to start the service" 1>&2
+    exit 1
+fi
+
 if [ "$type" == "dev" ]; then
     echo "Add runfolder-ws-test for easy integration testing"
     testbin="/usr/bin/runfolder-ws-test"
-    echo "source $installpath/bin/activate" > $testbin 
-    echo "nosetests $source/tests/integration" >> $testbin 
-    
-    chmod +x $testbin 
+    echo "source $installpath/bin/activate" > $testbin
+    echo "nosetests $source/tests/integration" >> $testbin
+
+    chmod +x $testbin
 
     echo "Running integration tests"
     $testbin
