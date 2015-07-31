@@ -1,6 +1,6 @@
 jsonpickle
 tornado
 click
-localq
+git+https://github.com/johandahlberg/localq.git@with_shell_true # Get from pip in future - localq
 mock # only for tests
-
+pyyaml
