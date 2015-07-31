@@ -27,8 +27,8 @@ class Config:
             try:
                 if not config_file:
                     config_file = os.path.join('./config/', 'bcl2fastq.config.yaml')
-                config = Config._load_yaml_config(config_file)
-                return config
+                Config.CONFIG = Config._load_yaml_config(config_file)
+                return Config.CONFIG
             except IOError:
                 raise IOError(("There was a problem loading the configuration file. "
                         "Please make sure that {0} exists and that you have "
