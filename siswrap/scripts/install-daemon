@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cp ./siswrap-wsd /etc/init.d/
+sudo update-rc.d siswrap-wsd defaults

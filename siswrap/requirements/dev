@@ -1,0 +1,6 @@
+-r prod
+pytest
+pytest-cov
+pytest-flakes
+coverage
+requests
