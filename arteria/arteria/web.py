@@ -6,6 +6,7 @@ import logging
 import logging.config
 import os
 from .configuration import ConfigurationService
+import itertools
 
 def undocumented(f):
     """
@@ -18,7 +19,7 @@ def undocumented(f):
 class RouteProvider:
     def __init__(self, routes, app_svc, debug):
         """
-        Initialize with routes and related help
+        Initialize with routes
 
         :param routes: A list of tuples with tornado routing definitions
         :param debug: True if debugging
@@ -27,12 +28,16 @@ class RouteProvider:
         self._debug = debug
         self._routes = routes
         self._routes.extend(self._get_default_routes(self))
-        self._route_infos = sorted(self._get_route_infos(self._routes),
-                                   key=lambda entry: (entry.route, entry.method))
-        self._base_url_applied = False
-        self._base_url_applied_lock = threading.Lock()
+        self._help_generated_lock = threading.Lock()
+        self._help_generated = False
 
-    def _doc_string_from_class(self, cls, attr_name):
+    def _doc_string_from_class_attribute(self, cls, attr_name):
+        """
+        Returns the doc string for the attribute
+
+        Ignores the documentation if it has the undocumented attribute
+        and is not running in debug mode
+        """
         attr = getattr(cls, attr_name)
         doc = attr.__doc__
         is_undocumented = hasattr(attr, "undocumented")
@@ -43,14 +48,30 @@ class RouteProvider:
                 doc = "(UNDOCUMENTED): {0}".format(doc)
             return doc
 
-    def _get_route_infos(self, tornado_routes):
+    def _get_route_infos_grouped(self, tornado_routes, base_url):
+        """Returns the route infos grouped by route"""
+        route_infos = list(self._get_route_infos(tornado_routes, base_url))
+        grouped = itertools.groupby(route_infos, lambda entry: entry.route)
+        routes = []
+        for key, groups in grouped:
+            route_info = {"route": key}
+            methods = []
+            for group in groups:
+                method = dict()
+                method[group.method] = group.description
+                methods.append(method)
+            route_info["methods"] = methods
+            routes.append(route_info)
+        return routes
+
+    def _get_route_infos(self, tornado_routes, base_url):
         for tornado_route in tornado_routes:
             route = tornado_route[0]
             cls = tornado_route[1]
             for method_name in "get", "post", "put", "delete":
-                doc = self._doc_string_from_class(cls, method_name)
+                doc = self._doc_string_from_class_attribute(cls, method_name)
                 if doc is not None:
-                    yield RouteInfo(route, method_name, doc)
+                    yield RouteInfo("{0}{1}".format(base_url, route), method_name, doc)
 
     def get_routes(self):
         return self._routes
@@ -60,19 +81,17 @@ class RouteProvider:
         route = "{0}{1}".format(base_url, route)
         return {"route": route, "description": raw_entry[1]}
 
-    def _apply_base_url(self, base_url):
-        # TODO: Review locking code
-        if not self._base_url_applied:
-            with self._base_url_applied_lock:
-                if not self._base_url_applied:
-                    for route_info in self._route_infos:
-                        route_info.route = "{0}{1}".format(base_url, route_info.route)
-                    self._base_url_applied = True
+    def _generate_help(self, force, base_url):
+        """Generates help from self._routes"""
+        if not self._help_generated or force:
+            with self._help_generated_lock:
+                if not self._help_generated:
+                    self._route_infos = self._get_route_infos_grouped(self._routes, base_url)
+                    self._help_generated = True
+        return self._route_infos
 
     def get_help(self, base_url):
-        # Apply the base_url the first time we get a request
-        self._apply_base_url(base_url)
-        return self._route_infos
+        return self._generate_help(True, base_url)
 
     def _get_default_routes(self, route_provider):
         """
@@ -91,13 +110,14 @@ class AppService:
         """Sets up the admin service and configures logging"""
         self.config_svc = config_svc
         self._debug = debug
-        self._logger = logger or logging.getLogger(__name__)
 
-        # Initialize the logger:
+        # Initialize the logger configuration:
         self._logger_config = config_svc.get_logger_config()
         logging.config.dictConfig(self._logger_config)
-        self._logger.info("Logger initialized by AppService. Path={0}"
-                          .format(config_svc._logger_config_path))
+
+        self._logger = logger or logging.getLogger(__name__)
+        self._logger.info("Logger initialized by AppService")
+        self._tornado = None
 
     @staticmethod
     def create(product_name, config_root, debug):
@@ -121,10 +141,10 @@ class AppService:
 
     def start(self, routes):
         route_provider = RouteProvider(routes, self, self._debug)
-        self._app = tornado.web.Application(route_provider.get_routes(), debug=self._debug)
+        self._tornado = tornado.web.Application(route_provider.get_routes(), debug=self._debug)
         self._logger.info("Starting the service on {0} (debug={1})"
                           .format(self.config_svc["port"], self._debug))
-        self._app.listen(self.config_svc["port"])
+        self._tornado.listen(self.config_svc["port"])
         tornado.ioloop.IOLoop.current().start()
 
     def set_log_level(self, log_level):
@@ -188,7 +208,7 @@ class LogLevelHandler(BaseRestHandler):
 
     def put(self):
         """
-        Set the current log_level of the running server. Call with e.g. {"log_level": "DEBUG"}
+        Set the current log_level of the running server. Call with e.g. {'log_level': 'DEBUG'}
         """
         json_body = self.body_as_object(["log_level"])
         log_level = json_body["log_level"]

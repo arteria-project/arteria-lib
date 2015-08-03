@@ -18,7 +18,7 @@ class RestApiTestCase(BaseRestTest):
     # These tests are intended to be full integration tests, mocking nothing
     def setUp(self):
         self.messages_logged = TestFunctionDelta(
-            lambda: line_count('/var/log/runfolder/runfolder.log'), self, 0.1)
+            lambda: line_count('/var/log/runfolder/messages.log'), self, 0.1)
 
     def test_can_change_log_level(self):
         self.put("./admin/log_level", {"log_level": "DEBUG"})
