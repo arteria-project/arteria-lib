@@ -15,6 +15,8 @@ And then you can find a simple api documentation by going to:
     http://localhost:8888/api/1.0
 
 Install:
+    # install dependencies
+    pip install -r requirements.txt
     # install the bcl2fastq_ws package and create the script bcl2fastq-ws
     python setup.py install
 
@@ -22,3 +24,12 @@ Install:
     # install the daemon, after this you can manage the service through
     # etc/init.d/bcl2fastq-ws
     install-daemon
+
+Running integration tests in docker container (with a centos base):
+
+    sudo docker pull centos
+    sudo docker build -t bcl2fastq-ws .
+    sudo docker run -v $PWD:/bcl2fastq-ws -p 8888:8888 -t -i bcl2fastq-ws:latest /bin/bash
+
+    # Once inside the docker container execute
+    cd /bcl2fastq-ws/ && pip install -r requirements.txt && python2.7 setup.py install && python2.7 bcl2fastq/app.py --config config/bcl2fastq.integration_tests.config.yaml
