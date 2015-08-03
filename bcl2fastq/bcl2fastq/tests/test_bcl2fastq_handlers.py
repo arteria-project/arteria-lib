@@ -33,9 +33,10 @@ class TestBcl2FastqHandlers(AsyncHTTPTestCase):
         return app.create_app(debug=False, auto_reload=False)
 
     def test_versions(self):
-        response = self.fetch(self.API_BASE + "/versions")
-        self.assertEqual(response.code, 200)
-        self.assertEqual(sorted(json.loads(response.body)), sorted(["2.15.2", "1.8.4"]))
+        with mock.patch.object(Config, 'load_config', return_value=TestBcl2FastqHandlers.DUMMY_CONFIG):
+            response = self.fetch(self.API_BASE + "/versions")
+            self.assertEqual(response.code, 200)
+            self.assertEqual(sorted(json.loads(response.body)), sorted(["2.15.2", "1.8.4"]))
 
     def test_start_missing_runfolder_in_body(self):
         response = self.fetch(self.API_BASE + "/start/150415_D00457_0091_AC6281ANXX", method="POST", body = "")

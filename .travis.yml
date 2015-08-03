@@ -6,6 +6,7 @@ python:
 install:
     - pip install -e ./arteria -r ./arteria/requirements/dev
     - pip install -e ./runfolder -r ./runfolder/requirements/dev
+    - pip install -e ./bcl2fastq -r ./bcl2fastq/requirements.txt  
 
 script:
     - ./unittests
