@@ -162,7 +162,7 @@ class RunfolderService:
         return state == RunfolderInfo.STATE_READY
 
     def _monitored_directories(self):
-        return self._configuration_svc.monitored_directories(self._host())
+        return self._configuration_svc["monitored_directories"]
 
     def next_runfolder(self):
         """Pulls for available run folders"""

@@ -21,7 +21,7 @@ executable="/opt/runfolder/bin/runfolder-ws"
 if [ "$2" == "dev" ]; then
     dbgflag="--debug"
 fi
-cmd="$executable --config=$config_path/runfolder.config --loggerconfig=$config_path/logger.config $dbgflag"
+cmd="$executable $dbgflag"
 
 is_running() {
     ps aux | grep -v grep | grep -v SCREEN | grep --quiet "$executable"

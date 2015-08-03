@@ -1,10 +1,6 @@
 from .runfolder import *
-from .admin import AdminService
-from .configuration import ConfigurationService
-import os
 import click
-import logging
-from arteria.web import BaseRestHandler
+from arteria.web import BaseRestHandler, AppService
 import tornado.web
 import arteria.web
 
@@ -15,8 +11,7 @@ class BaseRunfolderHandler(BaseRestHandler):
     def create_runfolder_link(self, path):
         return "{0:s}/runfolders/path{1:s}".format(self.api_link(), path)
 
-    def initialize(self, admin_svc, runfolder_svc, config_svc):
-        self.admin_svc = admin_svc
+    def initialize(self, runfolder_svc, config_svc):
         self.runfolder_svc = runfolder_svc
         self.config_svc = config_svc
 
@@ -55,6 +50,9 @@ class RunfolderHandler(BaseRunfolderHandler):
             raise tornado.web.HTTPError(404, "Runfolder '{0}' does not exist".format(path))
 
     def post(self, path):
+        """
+        Sets the state of the runfolder
+        """
         self.runfolder_svc.set_runfolder_state(path, "TODO")
 
     @arteria.web.undocumented
@@ -77,43 +75,21 @@ class TestFakeSequencerReadyHandler(BaseRunfolderHandler):
         """
         self.runfolder_svc.add_sequencing_finished_marker(path)
 
-def _create_config(path):
-    from configuration import ConfigurationFile
-    dirs = ['/data/testarteria1/mon1', '/data/testarteria1/mon2']
-    config_file = ConfigurationFile(dirs, 10800)
-    ConfigurationFile.write(path, config_file)
-    print "Created default config file at {0}".format(path)
-
 @click.command()
-@click.option('--config', default="./runfolder.config")
-@click.option('--loggerconfig', default="./logger.config")
+@click.option('--product', default=__package__)
+@click.option('--configroot')
 @click.option('--debug/--no-debug', default=False)
-@click.option('--create_config', default="")
-def start(config, loggerconfig, debug, create_config):
-    if create_config:
-        _create_config(create_config)
-        return
+def start(product, configroot, debug):
+    app_svc = AppService.create(product, configroot, debug)
+    runfolder_svc = RunfolderService(app_svc.config_svc)
 
-    if not os.path.isfile(config):
-        raise Exception("Can't open config file '{0}'".format(config))
-
-    admin_svc = AdminService(loggerconfig)
-    config_svc = ConfigurationService(config)
-    runfolder_svc = RunfolderService(config_svc)
-
-    logger = logging.getLogger(__name__)
-    logger.info("Starting the runfolder micro service on {0} (debug={1})"
-                .format(config_svc.port(), debug))
-    args = dict(runfolder_svc=runfolder_svc, admin_svc=admin_svc, config_svc=config_svc)
     # Setup the routing. Help will be automatically available at /api, and will be based on
     # the doc strings of the get/post/put/delete methods
+    args = dict(runfolder_svc=runfolder_svc, config_svc=app_svc.config_svc)
     routes = [
         (r"/api/1.0/runfolders", ListAvailableRunfoldersHandler, args),
         (r"/api/1.0/runfolders/next", NextAvailableRunfolderHandler, args),
         (r"/api/1.0/runfolders/path(/.*)", RunfolderHandler, args),
         (r"/api/1.0/runfolders/test/markasready/path(/.*)", TestFakeSequencerReadyHandler, args)
     ]
-    app = arteria.web.TornadoAppFactory.create_app(debug, routes)
-    app.listen(config_svc.port())
-    tornado.ioloop.IOLoop.current().start()
-
+    app_svc.start(routes)

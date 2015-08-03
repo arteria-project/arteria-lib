@@ -2,6 +2,10 @@ import tornado.web
 import jsonpickle
 import re
 import threading
+import logging
+import logging.config
+import os
+from .configuration import ConfigurationService
 
 def undocumented(f):
     """
@@ -10,41 +14,22 @@ def undocumented(f):
     f.undocumented = True
     return f
 
-class TornadoAppFactory:
-    """
-    Helpers for a Tornado app
-    """
-    @staticmethod
-    def create_app(debug, routes):
-        """Creates a web app for serving the REST endpoints, adding defaults for administration"""
-        route_provider = RouteProvider(routes, debug)
-        app = tornado.web.Application(route_provider.get_routes(), debug=debug)
-        return app
-
-class RouteInfo:
-    def __init__(self, route, method, description):
-        self.route = route
-        self.method = method
-        self.description = description
-
-    def __repr__(self):
-        return "[{0} method={1}: {2}]".format(self.route, self.method, self.description)
 
 class RouteProvider:
-    def __init__(self, routes, debug):
+    def __init__(self, routes, app_svc, debug):
         """
         Initialize with routes and related help
 
         :param routes: A list of tuples with tornado routing definitions
         :param debug: True if debugging
         """
+        self._app_svc = app_svc
         self._debug = debug
         self._routes = routes
         self._routes.extend(self._get_default_routes(self))
         self._route_infos = sorted(self._get_route_infos(self._routes),
                                    key=lambda entry: (entry.route, entry.method))
         self._base_url_applied = False
-        # TODO: Review locking code
         self._base_url_applied_lock = threading.Lock()
 
     def _doc_string_from_class(self, cls, attr_name):
@@ -76,6 +61,7 @@ class RouteProvider:
         return {"route": route, "description": raw_entry[1]}
 
     def _apply_base_url(self, base_url):
+        # TODO: Review locking code
         if not self._base_url_applied:
             with self._base_url_applied_lock:
                 if not self._base_url_applied:
@@ -94,8 +80,69 @@ class RouteProvider:
         """
         return [
             (r"/api", ApiHelpHandler, dict(route_provider=route_provider)),
-            (r"/api/1.0/admin/log_level", LogLevelHandler)
+            (r"/api/1.0/admin/log_level", LogLevelHandler, dict(app_svc=self._app_svc))
         ]
+
+
+class AppService:
+    """Core functionality for the application, such as logging support"""
+
+    def __init__(self, config_svc, debug, logger=None):
+        """Sets up the admin service and configures logging"""
+        self.config_svc = config_svc
+        self._debug = debug
+        self._logger = logger or logging.getLogger(__name__)
+
+        # Initialize the logger:
+        self._logger_config = config_svc.get_logger_config()
+        logging.config.dictConfig(self._logger_config)
+        self._logger.info("Logger initialized by AppService. Path={0}"
+                          .format(config_svc._logger_config_path))
+
+    @staticmethod
+    def create(product_name, config_root, debug):
+        """
+        Creates the default app service and related services with defaults
+        based on the product_name
+
+        Log files will be available under /opt/<product_name>/etc by default
+
+        :param product_name: The name of the product
+        """
+        if not config_root:
+            config_root = os.path.join("/opt", product_name, "etc")
+
+        logger_config_path = os.path.join(config_root, "logger.config")
+        app_config_path = os.path.join(config_root, "app.config")
+        config_svc = ConfigurationService(logger_config_path=logger_config_path,
+                                          app_config_path=app_config_path)
+        app_svc = AppService(config_svc, debug)
+        return app_svc
+
+    def start(self, routes):
+        route_provider = RouteProvider(routes, self, self._debug)
+        self._app = tornado.web.Application(route_provider.get_routes(), debug=self._debug)
+        self._logger.info("Starting the service on {0} (debug={1})"
+                          .format(self.config_svc["port"], self._debug))
+        self._app.listen(self.config_svc["port"])
+        tornado.ioloop.IOLoop.current().start()
+
+    def set_log_level(self, log_level):
+        # TODO: Directly change via logging module if possible
+        self._logger_config["handlers"]["file_handler"]["level"] = log_level
+        logging.config.dictConfig(self._logger_config)
+
+    def get_log_level(self):
+        return self._logger_config["handlers"]["file_handler"]["level"]
+
+class RouteInfo:
+    def __init__(self, route, method, description):
+        self.route = route
+        self.method = method
+        self.description = description
+
+    def __repr__(self):
+        return "[{0} method={1}: {2}]".format(self.route, self.method, self.description)
 
 class BaseRestHandler(tornado.web.RequestHandler):
     """
@@ -129,11 +176,14 @@ class LogLevelHandler(BaseRestHandler):
     """
     Handles getting/setting the log_level of the running application
     """
+    def initialize(self, app_svc):
+        self.app_svc = app_svc
+
     def get(self):
         """
         Get the current log_level of the running server
         """
-        log_level = self.admin_svc.get_log_level()
+        log_level = self.app_svc.get_log_level()
         self.write_object({"log_level": log_level})
 
     def put(self):
@@ -142,7 +192,7 @@ class LogLevelHandler(BaseRestHandler):
         """
         json_body = self.body_as_object(["log_level"])
         log_level = json_body["log_level"]
-        self.admin_svc.set_log_level(log_level)
+        self.app_svc.set_log_level(log_level)
         self.write_object({"log_level": log_level})
 
 class ApiHelpHandler(BaseRestHandler):
