@@ -19,6 +19,8 @@ class Bcl2FastqConfig:
                  nbr_of_cores=None):
 
         self.runfolder_input = runfolder_input
+        self.samplesheet = runfolder_input + "/Samplesheet.csv"
+        self.base_calls_input = runfolder_input + "/Data/Intensities/BaseCalls"
 
         if bcl2fastq_version:
             self.bcl2fastq_version = bcl2fastq_version
@@ -166,7 +168,7 @@ class BCL2Fastq2xRunner(BCL2FastqRunner):
 
         commandline_collection = [
             self.binary,
-            "--input-dir", self.config.runfolder_input,
+            "--input-dir", self.config.base_calls_input,
             "--output-dir", self.config.output]
 
         if self.config.barcode_mismatches:
@@ -182,6 +184,7 @@ class BCL2Fastq2xRunner(BCL2FastqRunner):
             commandline_collection.append(self.config.additional_args)
 
         command = " ".join(commandline_collection)
+        print("Generated command: " + command)
         return command
 
 class BCL2Fastq1xRunner(BCL2FastqRunner):
@@ -199,9 +202,11 @@ class BCL2Fastq1xRunner(BCL2FastqRunner):
         # Assumes configureBclToFastq.pl on path
         commandline_collection = [
             "configureBclToFastq.pl",
-            "--input-dir", self.config.runfolder_input,
+            "--input-dir", self.config.base_calls_input,
+            "--sample-sheet", self.samplesheet,
             "--output-dir", self.config.output,
-            "--fastq-cluster-count 0" # No upper-limit on number of clusters per output file.
+            "--fastq-cluster-count 0", # No upper-limit on number of clusters per output file.
+            "--force" # overwrite output if it exists.
         ]
 
         if self.config.barcode_mismatches:
@@ -223,4 +228,5 @@ class BCL2Fastq1xRunner(BCL2FastqRunner):
         commandline_collection.append(" && make -j{0}".format(self.config.nbr_of_cores))
 
         command = " ".join(commandline_collection)
+        print("Generated command: " + command)
         return command

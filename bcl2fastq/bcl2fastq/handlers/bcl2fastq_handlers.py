@@ -56,7 +56,6 @@ class VersionsHandler(BaseHandler):
         available_versions = config["bcl2fastq"]["versions"].keys()
         self.write_object(available_versions)
 
-
 class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
     """
     Start bcl2fastq
@@ -84,6 +83,7 @@ class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
 
         runfolder_base_path = Config.load_config()["runfolder_path"]
         runfolder_input = "{0}/{1}".format(runfolder_base_path, runfolder)
+
         import os.path as p
         if not p.isdir(runfolder_input):
             raise RuntimeError("No such file: {0}".format(runfolder_input))
@@ -135,13 +135,7 @@ class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
         """
 
         try:
-            request_data = dict()
-            if self.request.body:
-                request_data = json.loads(self.request.body)
-            else:
-                raise RuntimeError("Cannot handle empty request body.")
-
-            runfolder_config = self.create_config_from_request(runfolder, request_data)
+            runfolder_config = self.create_config_from_request(runfolder, json.loads(self.request.body))
 
             cmd = self.bcl2fastq_cmd_generation_service().\
                 create_bcl2fastq_runner(runfolder_config).\
