@@ -177,7 +177,7 @@ class SisApp(object):
    
         SisApp.logger = Logger(debug)
         SisApp.config_svc = ConfigurationService(config)
-        SisApp.process_svc = ProcessService(cls.config_svc, SisApp.logger) 
+        SisApp.process_svc = ProcessService(cls.config_svc, cls.logger) 
         cls.DEBUG = debug
 
         SisApp.logger.info("Starting the runfolder micro service on {0} (debug={1})".format(SisApp.config_svc.get_setting("port"), debug))

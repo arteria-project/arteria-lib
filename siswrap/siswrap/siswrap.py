@@ -211,13 +211,15 @@ class ProcessService(object):
     # about the process. 
     def run(self, wrapper_object):
         try: 
-            result = wrapper_object.run() 
+            wrapper_object.run() 
             self.proc_queue[wrapper_object.info.pid] = wrapper_object
             return wrapper_object
         except RuntimeError, err: 
             self.info.error("An error ocurred in ProcessService for: {0}".format(err))
 
-    # Poll the status of the process. Removes it from the queue if finished. 
+    # Poll the status of the process. Removes it from the queue if finished.
+    # Accepts a pid and returns the associated ProcessInfo if it exists, 
+    # otherwise an empty ProcessInfo with state NONE. 
     def poll_process(self, pid):
 
         pid = int(pid)
@@ -274,7 +276,7 @@ class ProcessService(object):
 
         # Remove the process from the queue if we're checking the status and it has finished. 
         # Don't remove a key if we are still working, or if the process doesn't exist
-        if proc_info.state not in [proc_info.STATE_STARTED, proc_info.STATE_NONE]:
+        if proc_info.state not in [ProcessInfo.STATE_STARTED, ProcessInfo.STATE_NONE]:
             self.logger.debug("Process {0} has finished/terminated. Removing from queue.".format(pid))
             del self.proc_queue[pid]
 
