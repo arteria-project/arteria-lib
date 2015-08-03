@@ -1,6 +1,6 @@
 import unittest
 
-from lib.bcl2fastq import *
+from bcl2fastq.lib.bcl2fastq_utils import *
 from test_utils import TestUtils
 
 class TestBcl2FastqConfig(unittest.TestCase):

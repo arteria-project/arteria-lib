@@ -1,5 +1,5 @@
 import subprocess
-from lib.config import Config
+from bcl2fastq.lib.config import Config
 import os.path
 
 class Bcl2FastqConfig:

@@ -1,7 +1,7 @@
 __author__ = 'johda411'
 
 import unittest
-from lib.jobrunner import *
+from bcl2fastq.lib.jobrunner import LocalQAdapter
 from localq.Status import Status
 import time
 
