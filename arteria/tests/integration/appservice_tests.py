@@ -1,4 +1,4 @@
-from arteria.web import AppService
+from arteria.web.app import AppService
 from unittest import TestCase
 
 class AppServiceTest(TestCase):
