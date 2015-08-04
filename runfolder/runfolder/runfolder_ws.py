@@ -1,6 +1,7 @@
 from .runfolder import *
 import click
-from arteria.web import BaseRestHandler, AppService
+from arteria.web.handlers import BaseRestHandler
+from arteria.web.app import AppService
 import tornado.web
 import arteria.web
 
@@ -55,7 +56,7 @@ class RunfolderHandler(BaseRunfolderHandler):
         """
         self.runfolder_svc.set_runfolder_state(path, "TODO")
 
-    @arteria.web.undocumented
+    @arteria.undocumented
     def put(self, path):
         """
         NOTE: put is provided for test purposes only.
@@ -68,7 +69,7 @@ class RunfolderHandler(BaseRunfolderHandler):
             raise tornado.web.HTTPError("400", "Path {0} is not monitored".format(path))
 
 class TestFakeSequencerReadyHandler(BaseRunfolderHandler):
-    @arteria.web.undocumented
+    @arteria.undocumented
     def put(self, path):
         """
         Marks the runfolder at the path as ready
