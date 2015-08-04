@@ -1,11 +1,10 @@
-from .runfolder import *
-import click
+import arteria
 from arteria.web.handlers import BaseRestHandler
-from arteria.web.app import AppService
+from runfolder.services import *
 import tornado.web
-import arteria.web
 
 class BaseRunfolderHandler(BaseRestHandler):
+    """Provides core logic for all runfolder handlers"""
     def append_runfolder_link(self, runfolder_info):
         runfolder_info.link = self.create_runfolder_link(runfolder_info.path)
 
@@ -17,6 +16,7 @@ class BaseRunfolderHandler(BaseRestHandler):
         self.config_svc = config_svc
 
 class ListAvailableRunfoldersHandler(BaseRunfolderHandler):
+    """Handles listing all available runfolders"""
     def get(self):
         """List all available runfolders"""
         runfolder_infos = list(self.runfolder_svc.list_available_runfolders())
@@ -33,8 +33,7 @@ class NextAvailableRunfolderHandler(BaseRunfolderHandler):
         self.write_object(runfolder_info)
 
 class RunfolderHandler(BaseRunfolderHandler):
-    """Handles a particular runfolder"""
-
+    """Handles a particular runfolder, identified by path"""
     def get(self, path):
         """
         Returns information about the runfolder at the path.
@@ -69,6 +68,12 @@ class RunfolderHandler(BaseRunfolderHandler):
             raise tornado.web.HTTPError("400", "Path {0} is not monitored".format(path))
 
 class TestFakeSequencerReadyHandler(BaseRunfolderHandler):
+    """
+    Handles setting the sequencing finished marker
+
+    This is provided for integration tests only
+    """
+
     @arteria.undocumented
     def put(self, path):
         """
@@ -76,21 +81,4 @@ class TestFakeSequencerReadyHandler(BaseRunfolderHandler):
         """
         self.runfolder_svc.add_sequencing_finished_marker(path)
 
-@click.command()
-@click.option('--product', default=__package__)
-@click.option('--configroot')
-@click.option('--debug/--no-debug', default=False)
-def start(product, configroot, debug):
-    app_svc = AppService.create(product, configroot, debug)
-    runfolder_svc = RunfolderService(app_svc.config_svc)
 
-    # Setup the routing. Help will be automatically available at /api, and will be based on
-    # the doc strings of the get/post/put/delete methods
-    args = dict(runfolder_svc=runfolder_svc, config_svc=app_svc.config_svc)
-    routes = [
-        (r"/api/1.0/runfolders", ListAvailableRunfoldersHandler, args),
-        (r"/api/1.0/runfolders/next", NextAvailableRunfolderHandler, args),
-        (r"/api/1.0/runfolders/path(/.*)", RunfolderHandler, args),
-        (r"/api/1.0/runfolders/test/markasready/path(/.*)", TestFakeSequencerReadyHandler, args)
-    ]
-    app_svc.start(routes)

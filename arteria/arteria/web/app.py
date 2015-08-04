@@ -2,13 +2,17 @@ import tornado.web
 import logging
 import logging.config
 import os
-from ..configuration import ConfigurationService
-from .routes import RouteService
-from .handlers import LogLevelHandler, ApiHelpHandler
+from arteria.configuration import ConfigurationService
+from arteria.web.routes import RouteService
+from arteria.web.handlers import LogLevelHandler, ApiHelpHandler
 
 
 class AppService:
-    """Core functionality for the application, such as logging support"""
+    """
+    Core functionality for the application.
+
+    Automatically sets up logging, given a config_svc that serves a logging config
+    """
 
     def __init__(self, config_svc, debug, logger=None):
         """Sets up the admin service and configures logging"""
@@ -30,9 +34,18 @@ class AppService:
         Creates the default app service and related services with defaults
         based on the product_name
 
-        Log files will be available under /opt/<product_name>/etc by default
+        These config files should be accessible:
+            - /opt/<product_name>/app.config
+            - /opt/<product_name>/logger.config
+
+        You can override this by supplying config_root, in which case they should be
+        found at <config_root>/*.config
 
         :param product_name: The name of the product
+        :param config_root: Search for config files under <config_root>
+            instead of /opt/<product_name>/etc
+        :param debug: Set to true to run the application in debug mode. This affects
+            how Tornado runs and how the route help is displayed
         """
         if not config_root:
             config_root = os.path.join("/opt", product_name, "etc")

@@ -2,6 +2,7 @@ import threading
 import re
 import itertools
 
+
 class RouteInfo:
     """Information about a method in a route"""
     def __init__(self, route, method, description):
@@ -18,7 +19,7 @@ class RouteService:
 
     def __init__(self, app_svc, debug):
         """
-        Initialize with routes
+        Initialize the route service. Routes need to be set via set_routes.
 
         :param routes: A list of tuples with tornado routing definitions
         :param debug: True if debugging
@@ -36,7 +37,23 @@ class RouteService:
         return self._routes
 
     def get_help(self, base_url):
+        """Returns the API help based on the routes"""
         return self._generate_help(False, base_url)
+
+    def _get_route_infos(self, tornado_routes, base_url):
+        """
+        Generates RouteInfo objects from routes. Help is generated
+        by inspecting the route handlers.
+
+        Returns nothing if no documentation is found.
+        """
+        for tornado_route in tornado_routes:
+            route = tornado_route[0]
+            cls = tornado_route[1]
+            for method_name in "get", "post", "put", "delete":
+                doc = self._doc_string_from_class_attribute(cls, method_name)
+                if doc is not None:
+                    yield RouteInfo("{0}{1}".format(base_url, route), method_name, doc)
 
     def _doc_string_from_class_attribute(self, cls, attr_name):
         """
@@ -48,7 +65,10 @@ class RouteService:
         attr = getattr(cls, attr_name)
         doc = attr.__doc__
         is_undocumented = hasattr(attr, "undocumented")
-        if doc is not None and (not is_undocumented or self._debug):
+
+        # Return the documentation if available. Skip it if it should be
+        # undocumented, unless in debug mode.
+        if (doc is not None) and (not is_undocumented or self._debug):
             doc = doc.strip()
             doc = re.sub(r'\s+', ' ', doc)
             if is_undocumented:
@@ -56,7 +76,15 @@ class RouteService:
             return doc
 
     def _get_route_infos_grouped(self, tornado_routes, base_url):
-        """Returns the route infos grouped by route"""
+        """
+        Returns the method help strings grouped by route, e.g.:
+
+        route: <url>
+        methods:
+            get: "help string for get"
+            put: "help string for put"
+            ...
+        """
         route_infos = list(self._get_route_infos(tornado_routes, base_url))
         grouped = itertools.groupby(route_infos, lambda entry: entry.route)
         routes = []
@@ -71,20 +99,6 @@ class RouteService:
             routes.append(route_info)
         routes = sorted(routes, key=lambda item: item["route"])
         return routes
-
-    def _get_route_infos(self, tornado_routes, base_url):
-        for tornado_route in tornado_routes:
-            route = tornado_route[0]
-            cls = tornado_route[1]
-            for method_name in "get", "post", "put", "delete":
-                doc = self._doc_string_from_class_attribute(cls, method_name)
-                if doc is not None:
-                    yield RouteInfo("{0}{1}".format(base_url, route), method_name, doc)
-
-    def _map_to_help_entry(self, raw_entry, base_url):
-        route = raw_entry[2] if len(raw_entry) > 2 else raw_entry[0][0]
-        route = "{0}{1}".format(base_url, route)
-        return {"route": route, "description": raw_entry[1]}
 
     def _generate_help(self, regenerate, base_url):
         """Generates help from self._routes"""
