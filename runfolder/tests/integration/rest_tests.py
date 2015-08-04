@@ -1,6 +1,5 @@
 import unittest
 import time
-import jsonpickle
 from arteria.testhelpers import TestFunctionDelta, BaseRestTest
 
 def line_count(path):
@@ -53,8 +52,7 @@ class RestApiTestCase(BaseRestTest):
 
         # The runfolder should show up in /runfolders
         resp = self.get("./runfolders")
-        runfolders = jsonpickle.decode(resp.text)
-        matching = [runfolder for runfolder in runfolders if runfolder["path"] == path]
+        matching = [runfolder for runfolder in resp.body_obj if runfolder["path"] == path]
         self.assertEqual(len(matching), 1)
 
         # TODO: Change state to "processing" and ensure it doesn't show up in /runfolders

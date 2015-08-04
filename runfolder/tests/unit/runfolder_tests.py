@@ -1,9 +1,11 @@
 import unittest
-import mock
+import logging
 from runfolder.runfolder import RunfolderService
-from runfolder.configuration import ConfigurationService
+
+logger = logging.getLogger(__name__)
 
 class RunfolderServiceTestCase(unittest.TestCase):
+
     def _valid_runfolder(self, path):
         if path.endswith("RTAComplete.txt"):
             return True
@@ -14,10 +16,12 @@ class RunfolderServiceTestCase(unittest.TestCase):
 
     def test_list_available_runfolders(self):
         # Setup
-        logger = mock.MagicMock()
-        configuration_svc = ConfigurationService("will_be_ignored")
-        configuration_svc.monitored_directories = lambda s: [
-            "/data/testarteria1/mon1", "/data/testarteria1/mon2"]
+        configuration_svc = {
+            "monitored_directories": [
+                "/data/testarteria1/mon1",
+                "/data/testarteria1/mon2"
+            ]
+        }
         runfolder_svc = RunfolderService(configuration_svc, logger)
 
         runfolder_svc._file_exists = self._valid_runfolder
@@ -36,13 +40,15 @@ class RunfolderServiceTestCase(unittest.TestCase):
 
     def test_next_runfolder(self):
         # Setup
-        logger = mock.MagicMock()
-        configuration_svc = ConfigurationService("will_be_ignored")
-        configuration_svc.monitored_directories = lambda s: ["/data/testarteria1/mon1"]
+        configuration_svc = {
+            "monitored_directories": [
+                "/data/testarteria1/mon1"
+            ]
+        }
+
+        # Since keys in configuration_svc can be directly indexed, we can mock it with a dict:
         runfolder_svc = RunfolderService(configuration_svc, logger)
-
         runfolder_svc._file_exists = self._valid_runfolder
-
         runfolder_svc._subdirectories = lambda path: ["runfolder001"]
         runfolder_svc._host = lambda: "localhost"
 
