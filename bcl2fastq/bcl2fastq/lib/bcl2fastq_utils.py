@@ -78,10 +78,8 @@ class BCL2FastqRunnerFactory:
     """
 
     def __init__(self, config=None):
-        if config:
-            self.bcl2fastq_mappings = config["bcl2fastq"]["versions"]
-        else:
-            self.bcl2fastq_mappings = Config.load_config()["bcl2fastq"]["versions"]
+        config = config or Config.load_config()
+        self.bcl2fastq_mappings = config["bcl2fastq"]["versions"]
 
     def _get_class_creator(self, version):
         """
