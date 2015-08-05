@@ -12,6 +12,25 @@ class AppService:
     Core functionality for the application.
 
     Automatically sets up logging, given a config_svc that serves a logging config
+
+    Usage example:
+        # Set up using the factory method, which provides default location of
+        # config files:
+        app_svc = AppService.create("product_name", debug=True)
+
+        # This sets up the service reading config files from:
+        #  - /opt/product_name/etc/app.config
+        #  - /opt/product_name/etc/logger.config
+
+        # Set up Tornado routes
+        args = dict(service1=Service1(), service2=Service2())
+        routes = [
+            (r"/api/1.0/endpoint1", Handler1, args),
+            (r"/api/1.0/endpoint2", Handler2, args)
+        ]
+
+        # Start the application. The port must be specified in app.config
+        app_svc.start(routes)
     """
 
     def __init__(self, config_svc, debug, logger=None):
