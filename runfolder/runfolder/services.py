@@ -162,7 +162,7 @@ class RunfolderService:
         return state == RunfolderInfo.STATE_READY
 
     def _monitored_directories(self):
-        return self._configuration_svc.monitored_directories(self._host())
+        return self._configuration_svc["monitored_directories"]
 
     def next_runfolder(self):
         """Pulls for available run folders"""
@@ -178,7 +178,6 @@ class RunfolderService:
 
     def list_available_runfolders(self):
         """Lists all the available runfolders on the host"""
-
         self._logger.debug("get_available_runfolder")
         for monitored_root in self._monitored_directories():
             self._logger.debug("Checking subdirectories of {0}".format(monitored_root))
@@ -190,8 +189,6 @@ class RunfolderService:
                     info = RunfolderInfo(self._host(),
                                          directory, RunfolderInfo.STATE_READY)
                     yield info
-
-        self._logger.debug("Done walking {0}".format(monitored_root))
 
 class CannotOverrideFile(Exception):
     pass

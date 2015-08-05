@@ -1,4 +1,52 @@
 import time
+import jsonpickle
+import requests
+import re
+import unittest
+
+class BaseRestTest(unittest.TestCase):
+    def _base_url(self):
+        raise NotImplementedError("The method base url must be implemented")
+
+    def _get_full_url(self, url):
+        """Replaces a starting . with base url"""
+        return re.sub(r'^\.', self._base_url(), url)
+
+    def _validate_response(self, resp, expect):
+        if expect is not None:
+            self.assertEqual(resp.status_code, expect)
+
+    def put(self, url, obj=None, expect=200):
+        """
+        Sends a PUT to the url, with the obj as the body
+
+        A starting '.' is replaced with the base url
+        :param obj: A Python object
+        :param expect: The expected status code
+        """
+        json = jsonpickle.encode(obj)
+        full_url = self._get_full_url(url)
+        resp = requests.put(full_url, json)
+        self._validate_response(resp, expect)
+        return resp
+
+    def get(self, url, expect=200):
+        """
+        Gets the item at url and returns a Python object based on the json body (if any).
+
+        A starting '.' is replaced with the base url
+
+        :param expect: The expected status code
+        """
+        full_url = self._get_full_url(url)
+        resp = requests.get(full_url)
+        self._validate_response(resp, expect)
+        try:
+            resp.body_obj = jsonpickle.decode(resp.text)
+        except ValueError:
+            resp.body_obj = None
+        return resp
+
 
 class TestFunctionDelta:
     """
