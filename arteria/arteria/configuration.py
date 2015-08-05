@@ -10,6 +10,17 @@ class ConfigurationService:
         :param logger: The logger instance to use. Will default to one named like the module
         :param logger_config_path: The path to the logger config file
         :param app_config_path: The path to the application specific config file
+
+        Usage example:
+        config_svc = ConfigurationService(logger_config_path="/opt/product/etc/logger.config",
+                                          app_config_path="/opt/product/etc/app.config")
+
+        # The app config and logger config will now be accessible through:
+        config_svc.get_app_config()
+        config_svc.get_logger_config()
+
+        # Config files are cached in-memory
+        # The config files should be YAML
         """
         self._logger = logger or logging.getLogger(__name__)
         self._logger_config_path = logger_config_path
