@@ -1,4 +1,3 @@
-__author__ = 'johda411'
 
 import unittest
 from bcl2fastq.lib.jobrunner import LocalQAdapter

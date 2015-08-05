@@ -1,4 +1,3 @@
-__author__ = 'johda411'
 
 class TestUtils:
 
