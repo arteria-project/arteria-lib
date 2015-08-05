@@ -4,10 +4,10 @@ import tornado.web
 from tornado.web import URLSpec as url
 import click
 
-from handlers.api_help_handlers import *
-from handlers.bcl2fastq_handlers import *
+from bcl2fastq.handlers.api_help_handlers import *
+from bcl2fastq.handlers.bcl2fastq_handlers import *
 
-from lib.config import Config
+from bcl2fastq.lib.config import Config
 
 
 def create_app(debug=False, auto_reload=False):

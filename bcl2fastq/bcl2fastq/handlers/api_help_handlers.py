@@ -1,5 +1,5 @@
 
-from handlers.base_handler import BaseHandler
+from bcl2fastq.handlers.base_handler import BaseHandler
 
 class ApiHelpEntry:
     """
