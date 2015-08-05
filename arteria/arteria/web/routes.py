@@ -28,6 +28,9 @@ class RouteService:
         self._debug = debug
         self._help_generated_lock = threading.Lock()
         self._help_generated = False
+
+        # NOTE: The routes are not set in the constructor because a reference
+        # to the route service is needed in the api help route handler
         self._routes = None
 
     def set_routes(self, routes):
@@ -47,6 +50,9 @@ class RouteService:
 
         Returns nothing if no documentation is found.
         """
+        if tornado_routes is None:
+            raise RoutesNotSetError("Routes must be set before RouteInfos can be generated")
+
         for tornado_route in tornado_routes:
             route = tornado_route[0]
             cls = tornado_route[1]
@@ -90,11 +96,9 @@ class RouteService:
         routes = []
         for key, groups in grouped:
             route_info = {"route": key}
-            methods = []
+            methods = dict()
             for group in groups:
-                method = dict()
-                method[group.method] = group.description
-                methods.append(method)
+                methods[group.method] = group.description
             route_info["methods"] = methods
             routes.append(route_info)
         routes = sorted(routes, key=lambda item: item["route"])
@@ -108,3 +112,6 @@ class RouteService:
                     self._route_infos = self._get_route_infos_grouped(self._routes, base_url)
                     self._help_generated = True
         return self._route_infos
+
+class RoutesNotSetError(Exception):
+    pass
