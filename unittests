@@ -1,0 +1,4 @@
+#!/bin/bash
+nosetests ./arteria/tests/unit
+nosetests ./runfolder/tests/unit
+

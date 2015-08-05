@@ -1,6 +1,6 @@
 import unittest
 import logging
-from runfolder.runfolder import RunfolderService
+from runfolder.services import RunfolderService
 
 logger = logging.getLogger(__name__)
 
