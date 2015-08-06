@@ -5,11 +5,27 @@ from test_utils import TestUtils
 
 class TestBcl2FastqConfig(unittest.TestCase):
 
+    test_dir = os.path.dirname(os.path.realpath(__file__))
+
     def test_get_bcl2fastq_version_from_run_parameters(self):
-        test_dir = os.path.dirname(os.path.realpath(__file__))
-        runfolder = test_dir + "/sampledata/HiSeq-samples/2014-02_13_average_run"
+        runfolder = TestBcl2FastqConfig.test_dir + "/sampledata/HiSeq-samples/2014-02_13_average_run"
         version = Bcl2FastqConfig.get_bcl2fastq_version_from_run_parameters(runfolder, TestUtils.DUMMY_CONFIG)
         self.assertEqual(version, "1.8.4")
+
+    def test_get_bases_mask_per_lane_from_samplesheet(self):
+        samplesheet_file = TestBcl2FastqConfig.test_dir + "/sampledata/samplesheet_example.csv"
+        expected_bases_mask = {1: "y*,iiiiiiii,iiiiiiii,y*",
+                               2: "y*,iiiiii,n*,y*",
+                               3: "y*,iiiiii,n*,y*",
+                               4: "y*,iiiiiii,n*,y*",
+                               5: "y*,iiiiiii,n*,y*",
+                               6: "y*,iiiiiii,n*,y*",
+                               7: "y*,iiiiiii,n*,y*",
+                               8: "y*,iiiiiii,n*,y*",
+                               }
+        actual_bases_mask = Bcl2FastqConfig.get_bases_mask_per_lane_from_samplesheet(samplesheet_file)
+        self.assertEqual(expected_bases_mask, actual_bases_mask)
+
 
 class TestBCL2FastqRunnerFactory(unittest.TestCase):
 

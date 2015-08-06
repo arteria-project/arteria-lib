@@ -1,6 +1,8 @@
 import subprocess
 from bcl2fastq.lib.config import Config
 import os.path
+from pandas import read_csv
+from illuminate.metadata import InteropMetadata
 
 class Bcl2FastqConfig:
     """
@@ -57,7 +59,6 @@ class Bcl2FastqConfig:
         :return the version of bcl2fastq to use.
         """
 
-        from illuminate.metadata import InteropMetadata
         meta_data = InteropMetadata(runfolder)
         model = meta_data.model
 
@@ -66,8 +67,43 @@ class Bcl2FastqConfig:
 
         return version
 
+    @staticmethod
+    def get_bases_mask_per_lane_from_samplesheet(samplesheet_file):
+        """
+        Create a bases-mask string per lane for based on the length of the index in the
+        provided samplesheet. This assumes that all indexes within a lane have
+        the same length.
+        :param samplesheet_file: samplesheet to fetch the index lengths from
+        :return a dict of the lane and base mask to use, e.g.:
+                 { 1:"y*,iiiiiiii,iiiiiiii,y*" , 2:"y*,iiiiii,n*,y*  [etc] }
+        """
+        def isDoubleIndex(idx):
+            return "-" in idx
 
+        def construct_double_index_basemask(idx):
+            (index1, index2) = idx.split("-")
+            return "y*,{0},{1},y*".format("i"*len(index1), "i"*len(index2))
 
+        def construct_single_index_basemask(idx, flowcell_has_double_idx):
+            if flowcell_has_double_idx:
+                return "y*,{0},{1},y*".format("i"*len(idx), "n*")
+            else:
+                return "y*,{0},y*".format("i"*len(idx))
+
+        samplesheet_df = read_csv(samplesheet_file)
+        lanes_and_indexes = samplesheet_df.loc[:,["Lane","Index"]]
+        first_index_and_lane = lanes_and_indexes.groupby(lanes_and_indexes.Lane).first()
+        indexes = first_index_and_lane["Index"].to_dict()
+        contains_double_index = True in map(isDoubleIndex, indexes.values())
+
+        base_masks = {}
+        for lane, read_index in indexes.iteritems():
+            if isDoubleIndex(read_index):
+                base_masks[lane] = construct_double_index_basemask(read_index.strip())
+            else:
+                base_masks[lane] = construct_single_index_basemask(read_index.strip(), contains_double_index)
+
+        return base_masks
 
 
 class BCL2FastqRunnerFactory:
@@ -180,6 +216,10 @@ class BCL2Fastq2xRunner(BCL2FastqRunner):
 
         if self.config.use_base_mask:
             commandline_collection.append("--use_base_mask " + self.config.use_base_mask)
+        else:
+            lanes_and_base_mask = Bcl2FastqConfig.get_bases_mask_per_lane_from_samplesheet(self.config.samplesheet)
+            for lane, base_mask in lanes_and_base_mask.iteritems():
+                commandline_collection.append("--use_base_mask {0}:{1}".format(lane, base_mask))
 
         if self.config.additional_args:
             commandline_collection.append(self.config.additional_args)
@@ -218,6 +258,15 @@ class BCL2Fastq1xRunner(BCL2FastqRunner):
 
         if self.config.use_base_mask:
             commandline_collection.append("--use_bases_mask " + self.config.use_base_mask)
+        else:
+            lanes_and_base_mask = Bcl2FastqConfig.get_bases_mask_per_lane_from_samplesheet(self.config.samplesheet)
+            base_masks_as_set = set(lanes_and_base_mask.values())
+
+            assert len(base_masks_as_set) is 1, "For bcl2fastq 1.8.4 there is no support for " \
+                                                "mixing different bases masks for different lanes"
+
+            # Here we are forced to use the same bases mask was always used for all lanes.
+            commandline_collection.append("--use_bases_mask " + lanes_and_base_mask.values()[0])
 
         if self.config.additional_args:
             commandline_collection.append(self.config.additional_args)
