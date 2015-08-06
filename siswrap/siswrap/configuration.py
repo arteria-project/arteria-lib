@@ -1,5 +1,6 @@
 import jsonpickle
 
+
 class ConfigurationService:
 
     def __init__(self, path):
@@ -16,11 +17,13 @@ class ConfigurationService:
     def get_setting(self, prop):
         self._load_config_file()
         setting = self._config_file.get(prop)
-        
-        if setting: 
+
+        if setting:
             return setting
-        else: 
-            raise LookupError("Couldn't lookup setting {0} in {1}".format(prop, self._path)) 
+        else:
+            raise LookupError("Couldn't lookup setting {0} in {1}".
+                              format(prop, self._path))
+
 
 class ConfigurationFile:
     """Represents a json serialized configuration file with key-value pairs"""

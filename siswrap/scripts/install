@@ -93,10 +93,10 @@ fi
 if [ "$type" == "dev" ]; then
     echo "Add siswrap-ws-test for easy integration testing"
     testbin="/usr/bin/siswrap-ws-test"
-    echo "source $installpath/bin/activate" > $testbin 
-    echo "nosetests $source/tests/integration" >> $testbin 
-    
-    chmod +x $testbin 
+    echo "source $installpath/bin/activate" > $testbin
+    echo "py.test $source/tests/integration" >> $testbin 
+
+    chmod +x $testbin
 
     echo "Running integration tests"
     $testbin
@@ -105,5 +105,3 @@ else
 fi
 
 echo "Moving back to the default python environment"
-
-
