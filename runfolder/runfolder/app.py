@@ -4,10 +4,11 @@ from runfolder.handlers import *
 
 @click.command()
 @click.option('--product', default=__package__)
+@click.option('--port')
 @click.option('--configroot')
 @click.option('--debug/--no-debug', default=False)
-def start(product, configroot, debug):
-    app_svc = AppService.create(product, configroot, debug)
+def start(product, port, configroot, debug):
+    app_svc = AppService.create(product, configroot, debug, port)
     runfolder_svc = RunfolderService(app_svc.config_svc)
 
     # Setup the routing. Help will be automatically available at /api, and will be based on
