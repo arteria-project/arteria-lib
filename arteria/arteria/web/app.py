@@ -16,7 +16,7 @@ class AppService:
     Usage example:
         # Set up using the factory method, which provides default location of
         # config files:
-        app_svc = AppService.create("product_name", debug=True)
+        app_svc = AppService.create("product_name", debug=True, port=8080)
 
         # This sets up the service reading config files from:
         #  - /opt/product_name/etc/app.config
