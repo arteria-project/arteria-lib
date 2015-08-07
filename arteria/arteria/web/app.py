@@ -127,5 +127,3 @@ class AppService:
 class InvalidPortError(Exception):
     pass
 
-class MissingArgumentError(Exception):
-    pass
