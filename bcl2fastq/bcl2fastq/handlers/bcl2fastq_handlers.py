@@ -1,9 +1,9 @@
 
-from handlers.base_handler import BaseHandler
-from lib.jobrunner import LocalQAdapter
-from lib.bcl2fastq import BCL2FastqRunnerFactory, Bcl2FastqConfig
+from bcl2fastq.handlers.base_handler import BaseHandler
+from bcl2fastq.lib.jobrunner import LocalQAdapter
+from bcl2fastq.lib.bcl2fastq_utils import BCL2FastqRunnerFactory, Bcl2FastqConfig
 import json
-from lib.config import Config
+from bcl2fastq.lib.config import Config
 import logging
 
 log = logging.getLogger(__name__)

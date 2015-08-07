@@ -3,8 +3,8 @@ from tornado.testing import *
 from tornado.escape import json_encode
 import mock
 
-from handlers.bcl2fastq_handlers import *
-import app
+from bcl2fastq.handlers.bcl2fastq_handlers import *
+from bcl2fastq.app import create_app
 
 
 class TestBcl2FastqHandlers(AsyncHTTPTestCase):
@@ -30,12 +30,13 @@ class TestBcl2FastqHandlers(AsyncHTTPTestCase):
                      "bcl2fastq_logs_path": "/tmp/"}
 
     def get_app(self):
-        return app.create_app(debug=False, auto_reload=False)
+        return create_app(debug=False, auto_reload=False)
 
     def test_versions(self):
-        response = self.fetch(self.API_BASE + "/versions")
-        self.assertEqual(response.code, 200)
-        self.assertEqual(sorted(json.loads(response.body)), sorted(["2.15.2", "1.8.4"]))
+        with mock.patch.object(Config, 'load_config', return_value=TestBcl2FastqHandlers.DUMMY_CONFIG):
+            response = self.fetch(self.API_BASE + "/versions")
+            self.assertEqual(response.code, 200)
+            self.assertEqual(sorted(json.loads(response.body)), sorted(["2.15.2", "1.8.4"]))
 
     def test_start_missing_runfolder_in_body(self):
         response = self.fetch(self.API_BASE + "/start/150415_D00457_0091_AC6281ANXX", method="POST", body = "")

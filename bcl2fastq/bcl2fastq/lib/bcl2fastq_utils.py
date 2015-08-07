@@ -1,5 +1,5 @@
 import subprocess
-from lib.config import Config
+from bcl2fastq.lib.config import Config
 import os.path
 
 class Bcl2FastqConfig:
@@ -48,7 +48,7 @@ class Bcl2FastqConfig:
             self.nbr_of_cores = multiprocessing.cpu_count()
 
     @staticmethod
-    def get_bcl2fastq_version_from_run_parameters(runfolder):
+    def get_bcl2fastq_version_from_run_parameters(runfolder, config):
         """
         Guess which bcl2fastq version to use based on the machine type
         specified in the runfolder meta data, and the corresponding
@@ -61,8 +61,8 @@ class Bcl2FastqConfig:
         meta_data = InteropMetadata(runfolder)
         model = meta_data.model
 
-        config = Config.load_config()
-        version = config["machine_type"][model]["bcl2fastq_version"]
+        current_config = config or Config.load_config()
+        version = current_config["machine_type"][model]["bcl2fastq_version"]
 
         return version
 
@@ -77,8 +77,9 @@ class BCL2FastqRunnerFactory:
     and the it's known binaries.
     """
 
-    def __init__(self, config_file = None):
-        self.bcl2fastq_mappings = Config.load_config(config_file)["bcl2fastq"]["versions"]
+    def __init__(self, config=None):
+        config = config or Config.load_config()
+        self.bcl2fastq_mappings = config["bcl2fastq"]["versions"]
 
     def _get_class_creator(self, version):
         """
@@ -203,7 +204,7 @@ class BCL2Fastq1xRunner(BCL2FastqRunner):
         commandline_collection = [
             "configureBclToFastq.pl",
             "--input-dir", self.config.base_calls_input,
-            "--sample-sheet", self.samplesheet,
+            "--sample-sheet", self.config.samplesheet,
             "--output-dir", self.config.output,
             "--fastq-cluster-count 0", # No upper-limit on number of clusters per output file.
             "--force" # overwrite output if it exists.

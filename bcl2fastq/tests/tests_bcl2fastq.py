@@ -1,24 +1,24 @@
 import unittest
 
-from lib.bcl2fastq import *
+from bcl2fastq.lib.bcl2fastq_utils import *
+from test_utils import TestUtils
 
 class TestBcl2FastqConfig(unittest.TestCase):
 
     def test_get_bcl2fastq_version_from_run_parameters(self):
-        runfolder = "bcl2fastq/tests/sampledata/HiSeq-samples/2014-02_13_average_run"
-        version = Bcl2FastqConfig.get_bcl2fastq_version_from_run_parameters(runfolder)
+        test_dir = os.path.dirname(os.path.realpath(__file__))
+        runfolder = test_dir + "/sampledata/HiSeq-samples/2014-02_13_average_run"
+        version = Bcl2FastqConfig.get_bcl2fastq_version_from_run_parameters(runfolder, TestUtils.DUMMY_CONFIG)
         self.assertEqual(version, "1.8.4")
 
 class TestBCL2FastqRunnerFactory(unittest.TestCase):
-
-    config_file = "config/bcl2fastq.config.yaml"
 
     def test_create_bcl2fastq1x_runner(self):
         config = Bcl2FastqConfig(bcl2fastq_version = "1.8.4",
                                  runfolder_input = "test/runfolder",
                                  output = "test/output")
 
-        factory = BCL2FastqRunnerFactory(self.config_file)
+        factory = BCL2FastqRunnerFactory(TestUtils.DUMMY_CONFIG)
         runner = factory.create_bcl2fastq_runner(config)
         self.assertIsInstance(runner, BCL2Fastq1xRunner)
 
@@ -27,7 +27,7 @@ class TestBCL2FastqRunnerFactory(unittest.TestCase):
                                  runfolder_input = "test/runfolder",
                                  output = "test/output")
 
-        factory = BCL2FastqRunnerFactory(self.config_file)
+        factory = BCL2FastqRunnerFactory(TestUtils.DUMMY_CONFIG)
         runner = factory.create_bcl2fastq_runner(config)
         self.assertIsInstance(runner, BCL2Fastq2xRunner, msg= "runner is: " + str(runner))
 
@@ -36,7 +36,7 @@ class TestBCL2FastqRunnerFactory(unittest.TestCase):
                                  runfolder_input = "test/runfolder",
                                  output = "test/output")
 
-        factory = BCL2FastqRunnerFactory(self.config_file)
+        factory = BCL2FastqRunnerFactory(TestUtils.DUMMY_CONFIG)
         with self.assertRaises(LookupError):
             factory.create_bcl2fastq_runner(config)
 
@@ -55,7 +55,7 @@ class TestBCL2Fastq2xRunner(unittest.TestCase):
 
         runner = BCL2Fastq2xRunner(config, "/bcl/binary/path")
         command = runner.construct_command()
-        expected_command = "/bcl/binary/path --input-dir test/runfolder " \
+        expected_command = "/bcl/binary/path --input-dir test/runfolder/Data/Intensities/BaseCalls " \
                            "--output-dir test/output --barcode-mismatches 2 " \
                            "--tiles s1,s2,s3 --use_base_mask Y*NN " \
                            "--my-best-arg 1 --my-best-arg 2"
@@ -99,9 +99,11 @@ class TestBCL2Fastq1xRunner(unittest.TestCase):
         runner_1 = BCL2Fastq1xRunner(config, "/dummy/binary")
         command = runner_1.construct_command()
         expected_command = "configureBclToFastq.pl " \
-                           "--input-dir test/runfolder " \
+                           "--input-dir test/runfolder/Data/Intensities/BaseCalls " \
+                           "--sample-sheet test/runfolder/Samplesheet.csv " \
                            "--output-dir test/output " \
                            "--fastq-cluster-count 0 " \
+                           "--force " \
                            "--mismatches 2 " \
                            "--tiles s1,s2,s3 " \
                            "--use_bases_mask Y*NN " \
