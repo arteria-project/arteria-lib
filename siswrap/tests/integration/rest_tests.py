@@ -2,16 +2,24 @@ import pytest
 import requests
 import time
 import jsonpickle
-from siswrap.configuration import *
+from siswrap.configuration import ConfigurationService
+from siswrap.siswrap import ProcessService
+# from siswrap.siswrap_ws import SisApp
 
-# TODO: Improve the integration tests somewhat
+
+# Recommended to have the environment variable ARTERIA_TEST set to 1
+# for the siswrap-wsd to test with a 1 min long running process
+
 
 class TestRestApi(object):
     BASE_URL = "http://testarteria1:10900/api/1.0"
     REPORT_URL = BASE_URL + "/report"
     QC_URL = BASE_URL + "/qc"
 
+    RUNFOLDER = "runfolder_inttest_1437474276963"
+
     CONF = "/opt/siswrap/etc/siswrap.config"
+    conf = ConfigurationService(CONF)
 
     STATE_NONE = "none"
     STATE_READY = "ready"
@@ -19,187 +27,213 @@ class TestRestApi(object):
     STATE_DONE = "done"
     STATE_ERROR = "error"
 
-    def __init__(self): 
-        self.conf = ConfigurationService(self.CONF)
+    my_queue = {}
 
-    def is_number(self, s): 
-        try: 
+    def is_number(self, s):
+        try:
             float(s)
             return True
-        except ValueError: 
+        except ValueError:
             return False
 
-        try: 
+        try:
             import unicodedata
             unicodedata.numeric(s)
             return True
-        except (TypeError, ValueError): 
+        except (TypeError, ValueError):
             return False
 
-    def start_runfolder(self, handler, runfolder): 
+    def start_runfolder(self, handler, runfolder):
         payload = {"runfolder": runfolder}
 
-        if handler == "qc": 
+        if handler == "qc":
             url = self.QC_URL + "/run/" + runfolder
-        elif handler == "report": 
+        elif handler == "report":
             url = self.REPORT_URL + "/run/" + runfolder
 
-        resp = requests.post(url, json = payload)
-        
+        resp = requests.post(url, json=payload)
+
         return resp
 
-    def get_url(self, handler): 
-        if handler == "qc": 
+    def get_url(self, handler):
+        if handler == "qc":
             return self.QC_URL
         elif handler == "report":
             return self.REPORT_URL
 
-    def start_handler(self, handler): 
-        runfolder = "foo"
+    def start_handler(self, handler, monkeypatch):
+        runfolder = self.RUNFOLDER
+
+        # Clear the process queue
+        self.my_queue = {}
+        monkeypatch.setattr("siswrap.siswrap.ProcessService.proc_queue",
+                            self.my_queue)
 
         resp = self.start_runfolder(handler, runfolder)
         assert resp.status_code == 202
 
         payload = jsonpickle.decode(resp.text)
 
-        assert payload.get("runfolder") == self.conf.get_setting("runfolder_root") + "/" + runfolder
+        assert payload.get("runfolder") == \
+            self.conf.get_setting("runfolder_root") + runfolder
         assert self.is_number(payload.get("pid")) is True
         pid = payload.get("pid")
         assert payload.get("state") == "started"
-        assert payload.get("link") == self.get_url(handler) + "/status/" + str(pid)
+        assert payload.get("link") == \
+            self.get_url(handler) + "/status/" + str(pid)
 
         link = payload.get("link")
 
+        # We should get 200 or 500 on status check if job has started
         resp = requests.get(link)
-        assert resp.status_code == 202 or resp.status_code == 500
+        assert resp.status_code == 200 or resp.status_code == 500
 
-    def check_all_statuses(self, handler): 
-        runfolders = ["foo", "bar"]
-        firstresp = []
-        pid = None
+    def check_all_statuses(self, handler, monkeypatch):
+        runfolders = [self.RUNFOLDER, self.RUNFOLDER]
+        mypids = []
+
+        # Clear the queue just in case
+        self.my_queue = {}
+        monkeypatch.setattr("siswrap.siswrap.ProcessService.proc_queue",
+                            self.my_queue)
 
         # Request two new runs
-        for runfolder in runfolders: 
+        for runfolder in runfolders:
             resp = self.start_runfolder(handler, runfolder)
             assert resp.status_code == 202
+            payload = jsonpickle.decode(resp.text)
+            mypids.append(payload["pid"])
 
         # See so we get back statuses for both and the jobs have started
         resp = requests.get(self.get_url(handler) + "/status/")
         assert resp.status_code == 200
-        payload = jsonpickle.decode(resp.text) 
-        pid = str(payload[0].get("pid"))
-    
-        #assert len(payload) == len(runfolders)
+        outerpayload = jsonpickle.decode(resp.text)
+        print "first outerpayload", outerpayload
 
-        for run in payload:
-            assert run.get("runfolder").split("/")[-1] in runfolders
-            firstresp.append(run.get("state"))
-            assert run.get("state") == "started" or run.get("state") == "error"
+        counter = 0
+        for idx, run in enumerate(outerpayload):
+            # assert run["pid"] in mypids
 
-        if firstresp[0] == "started":
-            # Sleep a little and check that the jobs have finished 
-            time.sleep(60)
-        
-            resp = requests.get(self.get_url(handler) + "/status/")
-            assert resp.status_code == 200
-            payload = jsonpickle.decode(resp.text)
-            pid = str(payload.get("pid"))
+            if run["pid"] in mypids:
+                assert run.get("runfolder").split("/")[-1] in runfolders
+                assert run.get("state") in ["started", "error"]
+                counter = counter + 1
 
-            for run in payload: 
-                assert run.get("state") == "done" 
+        assert counter == len(runfolders)
 
-            # Request detailed status about one of the jobs 
-            resp = requests.get(self.get_url(handler) + "/status/" + runfolders[0]) 
-            assert resp.status_code == 404
-            resp = requests.get(self.get_url(handler) + "/status/" + pid)
-            assert resp.status_code == 202
-            payload = jsonpickle.decode(resp.text) 
+        # Sleep before we check again
+        time.sleep(60)
 
-            # Detailed testing of the one status in separate function 
+        outerpayload = jsonpickle.decode(resp.text)
 
-            # Afterwards the global status report should be decreased by one 
-            resp = requests.get(self.get_url(handler) + "/status/")
-            assert resp.status_code == 200 
-            payload = jsonpickle.decode(resp.text) 
+        for idx, run in enumerate(outerpayload):
+            if run["pid"] in mypids and run["state"] == "started":
+                # Sleep before we check again
+                # time.sleep(60)
 
-            assert payload.get("runfolder") == runfolders[1]
-            assert payload.get("state") == "done"
+                resp = requests.get(self.get_url(handler) + "/status/")
+                assert resp.status_code == 200
+                innerpayload = jsonpickle.decode(resp.text)
+                innerpayloadpids = []
 
-            # And if we check the detailed status yet again then the process 
-            # shouldn't still exist. 
-            #assert len(payload) == len(runfolders) 
-            resp = requests.get(self.get_url(handler) + "/status/" + runfolders[0])
-            assert resp.status_code == 404
-            resp = requests.get(self.get_url(handler) + "/status/" + pid)
-            assert resp.status_code == 500
-            payload = jsonpickle.decode(resp.text) 
+                for innerrun in innerpayload:
+                    # assert innerrun.get("pid") in mypids
+                    innerpayloadpids.append(innerrun.get("pid"))
+                    assert innerrun.get("state") in ["done", "error"]
 
-            assert self.is_number(payload.get("pid")) is True
-            assert payload.get("state") == "none"
-        elif firstresp[0] == "error": 
-            resp = requests.get(self.get_url(handler) + "/status/" + runfolders[0])
-            assert resp.status_code == 404
-            resp = requests.get(self.get_url(handler) + "/status/" + pid)
-            assert resp.status_code == 500
-#            payload = jsonpickle.decode(resp.text) 
-#            assert payload.get("state") == "none"
+                # FIXME: Need to refactor this test into more managable parts
+                # for pid in mypids:
+                #    assert pid in innerpayloadpids
+
+                # Request detailed status
+                resp = requests.get(self.get_url(handler) + "/status/" +
+                                    str(run["pid"]))
+                assert resp.status_code == 200
+                innerpayload = jsonpickle.decode(resp.text)
+                assert innerpayload.get("state") == "done"
+
+                # And if we check the detailed status yet again then the
+                # process shouldn't still exist.
+                resp = requests.get(self.get_url(handler) + "/status/" +
+                                    str(run["pid"]))
+                assert resp.status_code == 500
+                innerpayload = jsonpickle.decode(resp.text)
+                assert innerpayload.get("state") == "none"
+                assert self.is_number(innerpayload.get("pid")) is True
+            elif run["state"] == "error":
+                resp = requests.get(self.get_url(handler) + "/status/" +
+                                    str(run["pid"]))
+                assert resp.status_code == 500
+                innerpayload = jsonpickle.decode(resp.text)
+                assert innerpayload.get("state") == "none"
+
+        # Now our pids shouldn't exist in the global status
+        resp = requests.get(self.get_url(handler) + "/status/")
+        outerpayload = jsonpickle.decode(resp.text)
+        for run in outerpayload:
+            assert run.get("pid") not in mypids
+
+    def check_a_status(self, handler, monkeypatch):
+        runfolder = self.RUNFOLDER
+
+        # Clear the process queue
+        self.my_queue = {}
+        monkeypatch.setattr("siswrap.siswrap.ProcessService.proc_queue",
+                            self.my_queue)
+
+        # We should receive a HTTP status code 202 after submission
+        resp = self.start_runfolder(handler, runfolder)
+        assert resp.status_code == 202
+
+        payload = jsonpickle.decode(resp.text)
+        pid = str(payload.get("pid"))
+
+        # The status handler should return a HTTP status 200 if the process
+        # is found
+        resp = requests.get(self.get_url(handler) + "/status/" + pid)
+        assert resp.status_code == 200
+        payload = jsonpickle.decode(resp.text)
+        assert payload.get("state") == "started"
+        assert payload.get("runfolder") == \
+            self.conf.get_setting("runfolder_root") + runfolder
+        assert self.is_number(payload.get("pid")) is True
+
+        # We want to make sure that the process has finished.
+        time.sleep(70)
+
+        # And now we check it again and should get a done response
+        resp = requests.get(self.get_url(handler) + "/status/" + pid)
+        assert resp.status_code == 200
+        payload = jsonpickle.decode(resp.text)
+        assert payload.get("state") == "done"
+
+        # Now when we have checked it again the process should be gone
+        resp = requests.get(self.get_url(handler) + "/status/" + pid)
+        assert resp.status_code == 500
+        payload = jsonpickle.decode(resp.text)
+        assert payload.get("state") == "none"
 
     def test_basic_smoke_test(self):
         resp = requests.get(self.BASE_URL)
         assert resp.status_code == 200
 
-    def test_can_start_a_report(self): 
-        self.start_handler("report")
+    def test_can_start_a_report(self, monkeypatch):
+        self.start_handler("report", monkeypatch)
 
-    def test_can_start_a_qc(self): 
-        self.start_handler("qc")
+    def test_can_start_a_qc(self, monkeypatch):
+        self.start_handler("qc", monkeypatch)
 
-    def check_a_status(self, handler): 
-        runfolder = "foo"
-       
-        resp = self.start_runfolder(handler, runfolder)
-        assert resp.status_code == 202
-        
-        payload = jsonpickle.decode(resp.text)
-        pid = str(payload.get("pid"))
+    def test_can_check_a_report_status(self, monkeypatch):
+        self.check_a_status("report", monkeypatch)
 
-#        resp = requests.get(self.get_url(handler) + "/status/" + runfolder)
-#        assert resp.status_code == 500
+    def test_can_check_a_qc_status(self, monkeypatch):
+        self.check_a_status("qc", monkeypatch)
 
-        resp = requests.get(self.get_url(handler) + "/status/" + pid)
-        assert resp.status_code == 202
-        payload = jsonpickle.decode(resp.text) 
+    def test_can_check_all_report_statuses(self, monkeypatch):
+        self.check_all_statuses("report", monkeypatch)
 
-        assert payload.get("state") == "started"
-        assert payload.get("runfolder") == self.conf.get_setting("runfolder_root") + "/" + runfolder
-        assert self.is_number(payload.get("pid")) is True
-
-        # We want to make sure that the process has finished.
-        time.sleep(60) 
-
-        resp = requests.get(self.get_url(handler) + "/status/" + pid) 
-        assert resp.status_code == 500 
-        payload = jsonpickle.decode(resp.text) 
-        assert payload.get("state") == "error"
-
-        # Now when we have checked it again the process should be gone
-        resp = requests.get(self.get_url(handler) + "/status/" + pid)
-        assert resp.status_code == 500
-        payload = jsonpickle.decode(resp.text) 
-        assert payload.get("state") == "none"
-       
-    def test_can_check_a_report_status(self): 
-        self.check_a_status("report")
-    
-    def test_can_check_a_qc_status(self): 
-        self.check_a_status("qc")
-
-    def test_can_check_all_report_statuses(self): 
-        self.check_all_statuses("report")
-
-    def test_can_check_all_qc_statuses(self): 
-        self.check_all_statuses("qc")
+    def test_can_check_all_qc_statuses(self, monkeypatch):
+        self.check_all_statuses("qc", monkeypatch)
 
 if __name__ == '__main__':
     pytest.main()
-
