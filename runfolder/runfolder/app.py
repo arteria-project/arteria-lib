@@ -2,7 +2,7 @@ from arteria.web.app import AppService
 from runfolder.handlers import *
 
 def start():
-    app_svc = AppService.create()
+    app_svc = AppService.create(__package__)
     runfolder_svc = RunfolderService(app_svc.config_svc)
 
     # Setup the routing. Help will be automatically available at /api, and will be based on
@@ -15,3 +15,4 @@ def start():
         (r"/api/1.0/runfolders/test/markasready/path(/.*)", TestFakeSequencerReadyHandler, args)
     ]
     app_svc.start(routes)
+

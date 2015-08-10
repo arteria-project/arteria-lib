@@ -7,6 +7,7 @@ from arteria.web.routes import RouteService
 from arteria.web.handlers import LogLevelHandler, ApiHelpHandler
 from optparse import OptionParser
 
+
 class AppService:
     """
     Core functionality for the application.
@@ -55,14 +56,17 @@ class AppService:
         self._tornado = None
 
     @staticmethod
-    def create():
+    def create(product_name=None):
         """
         Creates the default app service based on arguments sent from the command line
-        and related services with defaults based on the product_name
+        and related services with defaults based on the product_name.
+
+        If the product_name is specified via the command line, it will override
+        the argument.
 
         Command line usage: <program>
-                               --product <product name>
                                --port <port>
+                               [--product <product name>]
                                [--debug]
                                [--configroot path]
 
@@ -73,11 +77,8 @@ class AppService:
         You can override this by supplying config_root, in which case they should be
         found at <config_root>/*.config
 
-        :param product_name: The name of the product
-        :param config_root: Search for config files under <config_root>
-            instead of /opt/<product_name>/etc
-        :param debug: Set to true to run the application in debug mode. This affects
-            how Tornado runs and how the route help is displayed
+        :param product_name: Should by convention be __package__. This value can be overriden
+                             by supplying the --product parameter on the command line.
         """
 
         parser = OptionParser()
@@ -87,9 +88,14 @@ class AppService:
         parser.add_option("--configroot", dest="configroot", metavar="CONFIGROOT")
         (options, args) = parser.parse_args()
 
-        if not options.configroot:
-            config_root = os.path.join("/opt", options.product, "etc")
+        if options.product:
+            product_name = options.product
 
+        if not product_name:
+            raise ProductNameError(
+                "No product name was supplied via the command line or as an argument to create")
+
+        config_root = options.configroot or os.path.join("/opt", product_name, "etc")
         logger_config_path = os.path.join(config_root, "logger.config")
         app_config_path = os.path.join(config_root, "app.config")
         config_svc = ConfigurationService(logger_config_path=logger_config_path,
@@ -125,5 +131,8 @@ class AppService:
         ]
 
 class InvalidPortError(Exception):
+    pass
+
+class ProductNameError(Exception):
     pass
 
