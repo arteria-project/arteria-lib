@@ -5,3 +5,5 @@ git+https://github.com/johandahlberg/localq.git@with_shell_true # Get from pip i
 mock # only for tests
 pyyaml
 illuminate
+pandas
+
