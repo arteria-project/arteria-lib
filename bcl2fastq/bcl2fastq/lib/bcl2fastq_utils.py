@@ -68,6 +68,19 @@ class Bcl2FastqConfig:
         return version
 
     @staticmethod
+    def get_length_of_indexes(runfolder):
+        """
+        Will parse runfolder meta data to find the length of the index reads.
+        :param runfolder: to get the length of the index reads from.
+        :return: a cict with the index number as key and the length of each index as value e.g.:
+                 {1: 7, 2: 8}
+        """
+        meta_data = InteropMetadata(runfolder)
+        index_read_info = filter(lambda x: x["is_index"], meta_data.read_config)
+        indexes_and_lengths = map(lambda x: (x["read_num"], x["cycles"]), index_read_info)
+        return dict(indexes_and_lengths)
+
+    @staticmethod
     def get_bases_mask_per_lane_from_samplesheet(samplesheet_file):
         """
         Create a bases-mask string per lane for based on the length of the index in the

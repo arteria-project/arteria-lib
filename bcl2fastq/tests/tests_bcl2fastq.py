@@ -12,7 +12,14 @@ class TestBcl2FastqConfig(unittest.TestCase):
         version = Bcl2FastqConfig.get_bcl2fastq_version_from_run_parameters(runfolder, TestUtils.DUMMY_CONFIG)
         self.assertEqual(version, "1.8.4")
 
+    def test_get_length_of_indexes(self):
+        runfolder = TestBcl2FastqConfig.test_dir + "/sampledata/HiSeq-samples/2014-02_13_average_run"
+        index_and_length = Bcl2FastqConfig.get_length_of_indexes(runfolder)
+        self.assertEqual(index_and_length, {2: 7})
+
     def test_get_bases_mask_per_lane_from_samplesheet(self):
+        #TODO Fix test to match that we might now have a read that uses the full
+        # lenght of the read.
         samplesheet_file = TestBcl2FastqConfig.test_dir + "/sampledata/samplesheet_example.csv"
         expected_bases_mask = {1: "y*,iiiiiiii,iiiiiiii,y*",
                                2: "y*,iiiiii,n*,y*",
