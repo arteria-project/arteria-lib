@@ -6,6 +6,7 @@ from test_utils import TestUtils
 class TestBcl2FastqConfig(unittest.TestCase):
 
     test_dir = os.path.dirname(os.path.realpath(__file__))
+    samplesheet_file = test_dir + "/sampledata/samplesheet_example.csv"
 
     def test_get_bcl2fastq_version_from_run_parameters(self):
         runfolder = TestBcl2FastqConfig.test_dir + "/sampledata/HiSeq-samples/2014-02_13_average_run"
@@ -20,18 +21,27 @@ class TestBcl2FastqConfig(unittest.TestCase):
     def test_get_bases_mask_per_lane_from_samplesheet(self):
         #TODO Fix test to match that we might now have a read that uses the full
         # lenght of the read.
-        samplesheet_file = TestBcl2FastqConfig.test_dir + "/sampledata/samplesheet_example.csv"
-        expected_bases_mask = {1: "y*,iiiiiiii,iiiiiiii,y*",
-                               2: "y*,iiiiii,n*,y*",
-                               3: "y*,iiiiii,n*,y*",
-                               4: "y*,iiiiiii,n*,y*",
-                               5: "y*,iiiiiii,n*,y*",
-                               6: "y*,iiiiiii,n*,y*",
-                               7: "y*,iiiiiii,n*,y*",
-                               8: "y*,iiiiiii,n*,y*",
+        mock_read_index_lengths = {1: 9, 2: 9}
+        expected_bases_mask = {1: "y*,8in*,8in*,y*",
+                               2: "y*,6in*,n*,y*",
+                               3: "y*,6in*,n*,y*",
+                               4: "y*,7in*,n*,y*",
+                               5: "y*,7in*,n*,y*",
+                               6: "y*,7in*,n*,y*",
+                               7: "y*,7in*,n*,y*",
+                               8: "y*,7in*,n*,y*",
                                }
-        actual_bases_mask = Bcl2FastqConfig.get_bases_mask_per_lane_from_samplesheet(samplesheet_file)
+        actual_bases_mask = Bcl2FastqConfig.\
+            get_bases_mask_per_lane_from_samplesheet(TestBcl2FastqConfig.samplesheet_file, mock_read_index_lengths)
         self.assertEqual(expected_bases_mask, actual_bases_mask)
+
+    def test_get_bases_mask_per_lane_from_samplesheet_invalid_length_combo(self):
+        # These are to short compared to the length indicated in the samplesheet
+        mock_read_index_lengths = {1: 4, 2: 4}
+
+        with self.assertRaises(AssertionError):
+            Bcl2FastqConfig.\
+                get_bases_mask_per_lane_from_samplesheet(TestBcl2FastqConfig.samplesheet_file, mock_read_index_lengths)
 
 
 class TestBCL2FastqRunnerFactory(unittest.TestCase):

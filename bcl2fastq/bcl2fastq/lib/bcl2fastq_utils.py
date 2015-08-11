@@ -81,33 +81,55 @@ class Bcl2FastqConfig:
         return dict(indexes_and_lengths)
 
     @staticmethod
-    def get_bases_mask_per_lane_from_samplesheet(samplesheet_file):
+    def get_bases_mask_per_lane_from_samplesheet(samplesheet_file, index_lengths):
         """
         Create a bases-mask string per lane for based on the length of the index in the
         provided samplesheet. This assumes that all indexes within a lane have
         the same length.
+
+        If the length read on the machine (as specified in `index_lengths`) is longer
+        than the index length specified samplesheet, the base mask will be set to
+        mask any extra bases.
+
         :param samplesheet_file: samplesheet to fetch the index lengths from
+        :param index_lengths: dict of index lengths (e.g. "{1: 7, 2: 8}"),
+        normally parsed from run meta data.
         :return a dict of the lane and base mask to use, e.g.:
-                 { 1:"y*,iiiiiiii,iiiiiiii,y*" , 2:"y*,iiiiii,n*,y*  [etc] }
+                 { 1:"y*,iiiiiiiin*,iiiiiiiin*,y*" , 2:"y*,iiiiii,n*,y*  [etc] }
         """
         def is_double_index(idx):
             return "-" in idx
 
+        def pad_with_ignore(length_of_index_in_samplesheet, length_of_index_read):
+            difference = length_of_index_read - length_of_index_in_samplesheet
+            print("difference: " + str(difference))
+            assert difference >= 0, "Sample sheet indicates that index is longer than what was read by the sequencer!"
+            if difference > 0:
+                return "n*"
+            else:
+                ""
+
         def construct_double_index_basemask(idx):
             (index1, index2) = idx.split("-")
-            return "y*,{0},{1},y*".format("i"*len(index1), "i"*len(index2))
+            index1_length = len(index1)
+            index2_length = len(index2)
+            return "y*,{0}{1}{2},{3}{4}{5},y*".format(
+                index1_length, "i", pad_with_ignore(index1_length, index_lengths[1]),
+                index2_length, "i", pad_with_ignore(index2_length, index_lengths[2]))
 
         def construct_single_index_basemask(idx, flowcell_has_double_idx):
+            idx_length = len(idx)
             if flowcell_has_double_idx:
-                return "y*,{0},{1},y*".format("i"*len(idx), "n*")
+                return "y*,{0}{1}{2},{3},y*".format(
+                    idx_length, "i", pad_with_ignore(idx_length, index_lengths[1]), "n*")
             else:
-                return "y*,{0},y*".format("i"*len(idx))
+                return "y*,{0}{1}{2},y*".format(idx_length, "i", pad_with_ignore(idx_length, index_lengths[1]))
 
         samplesheet_df = read_csv(samplesheet_file)
         lanes_and_indexes = samplesheet_df.loc[:,["Lane","Index"]]
         first_index_and_lane = lanes_and_indexes.groupby(lanes_and_indexes.Lane).first()
         indexes = first_index_and_lane["Index"].to_dict()
-        contains_double_index = True in map(is_double_index, indexes.values())
+        contains_double_index = 2 in index_lengths
 
         base_masks = {}
         for lane, read_index in indexes.iteritems():
