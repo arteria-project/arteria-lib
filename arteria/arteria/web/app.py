@@ -5,6 +5,7 @@ import os
 from arteria.configuration import ConfigurationService
 from arteria.web.routes import RouteService
 from arteria.web.handlers import LogLevelHandler, ApiHelpHandler
+from optparse import OptionParser
 
 
 class AppService:
@@ -14,22 +15,26 @@ class AppService:
     Automatically sets up logging, given a config_svc that serves a logging config
 
     Usage example:
-        # Set up using the factory method, which provides default location of
-        # config files:
-        app_svc = AppService.create("product_name", debug=True, port=8080)
+        def start():
+            # The following sets up a default AppService, reading
+            # default arguments from the command line, in particular
+            # --port and --product:
+            app_svc = AppService.create()
 
-        # This sets up the service reading config files from:
-        #  - /opt/product_name/etc/app.config
-        #  - /opt/product_name/etc/logger.config
+            # The service is now set up to read config files from:
+            #  - /opt/product_name/etc/app.config
+            #  - /opt/product_name/etc/logger.config
 
-        # Set up Tornado routes
-        args = dict(service1=Service1(), service2=Service2())
-        routes = [
-            (r"/api/1.0/endpoint1", Handler1, args),
-            (r"/api/1.0/endpoint2", Handler2, args)
-        ]
+            # Now set up Tornado routes
+            args = dict(service1=Service1(), service2=Service2())
+            routes = [
+                (r"/api/1.0/endpoint1", Handler1, args),
+                (r"/api/1.0/endpoint2", Handler2, args)
+            ]
 
-        app_svc.start(routes)
+            # Now start the service.
+            # The port will come from the command line argument --port
+            app_svc.start(routes)
     """
 
     def __init__(self, config_svc, debug, port, logger=None):
@@ -51,10 +56,19 @@ class AppService:
         self._tornado = None
 
     @staticmethod
-    def create(product_name, config_root, debug, port):
+    def create(product_name=None):
         """
-        Creates the default app service and related services with defaults
-        based on the product_name
+        Creates the default app service based on arguments sent from the command line
+        and related services with defaults based on the product_name.
+
+        If the product_name is specified via the command line, it will override
+        the argument.
+
+        Command line usage: <program>
+                               --port <port>
+                               [--product <product name>]
+                               [--debug]
+                               [--configroot path]
 
         These config files should be accessible:
             - /opt/<product_name>/app.config
@@ -63,20 +77,30 @@ class AppService:
         You can override this by supplying config_root, in which case they should be
         found at <config_root>/*.config
 
-        :param product_name: The name of the product
-        :param config_root: Search for config files under <config_root>
-            instead of /opt/<product_name>/etc
-        :param debug: Set to true to run the application in debug mode. This affects
-            how Tornado runs and how the route help is displayed
+        :param product_name: Should by convention be __package__. This value can be overriden
+                             by supplying the --product parameter on the command line.
         """
-        if not config_root:
-            config_root = os.path.join("/opt", product_name, "etc")
 
+        parser = OptionParser()
+        parser.add_option("--product", dest="product", metavar="PRODUCT")
+        parser.add_option("--port", dest="port", metavar="PORT")
+        parser.add_option("--debug", dest="debug", action="store_true", default=False)
+        parser.add_option("--configroot", dest="configroot", metavar="CONFIGROOT")
+        (options, args) = parser.parse_args()
+
+        if options.product:
+            product_name = options.product
+
+        if not product_name:
+            raise ProductNameError(
+                "No product name was supplied via the command line or as an argument to create")
+
+        config_root = options.configroot or os.path.join("/opt", product_name, "etc")
         logger_config_path = os.path.join(config_root, "logger.config")
         app_config_path = os.path.join(config_root, "app.config")
         config_svc = ConfigurationService(logger_config_path=logger_config_path,
                                           app_config_path=app_config_path)
-        app_svc = AppService(config_svc, debug, int(port))
+        app_svc = AppService(config_svc, options.debug, int(options.port))
         return app_svc
 
     def start(self, routes):
@@ -108,3 +132,7 @@ class AppService:
 
 class InvalidPortError(Exception):
     pass
+
+class ProductNameError(Exception):
+    pass
+
