@@ -21,7 +21,7 @@ class TestBcl2FastqConfig(unittest.TestCase):
     def test_get_bases_mask_per_lane_from_samplesheet(self):
         #TODO Fix test to match that we might now have a read that uses the full
         # lenght of the read.
-        mock_read_index_lengths = {1: 9, 2: 9}
+        mock_read_index_lengths = {2: 9, 3: 9}
         expected_bases_mask = {1: "y*,8in*,8in*,y*",
                                2: "y*,6in*,n*,y*",
                                3: "y*,6in*,n*,y*",
@@ -37,7 +37,7 @@ class TestBcl2FastqConfig(unittest.TestCase):
 
     def test_get_bases_mask_per_lane_from_samplesheet_invalid_length_combo(self):
         # These are to short compared to the length indicated in the samplesheet
-        mock_read_index_lengths = {1: 4, 2: 4}
+        mock_read_index_lengths = {2: 4, 3: 4}
 
         with self.assertRaises(AssertionError):
             Bcl2FastqConfig.\
@@ -83,7 +83,7 @@ class TestBCL2Fastq2xRunner(unittest.TestCase):
             output = "test/output",
             barcode_mismatches = "2",
             tiles="s1,s2,s3",
-            use_base_mask="--use_base_mask y*,6i,6i,y* --use_base_mask 1:y*,5i,5i,y*",
+            use_base_mask="--use-bases-mask y*,6i,6i,y* --use-bases-mask 1:y*,5i,5i,y*",
             additional_args="--my-best-arg 1 --my-best-arg 2")
 
         runner = BCL2Fastq2xRunner(config, "/bcl/binary/path")
@@ -91,7 +91,7 @@ class TestBCL2Fastq2xRunner(unittest.TestCase):
         expected_command = "/bcl/binary/path --input-dir test/runfolder/Data/Intensities/BaseCalls " \
                            "--output-dir test/output --barcode-mismatches 2 " \
                            "--tiles s1,s2,s3 " \
-                           "--use_base_mask y*,6i,6i,y* --use_base_mask 1:y*,5i,5i,y* " \
+                           "--use-bases-mask y*,6i,6i,y* --use-bases-mask 1:y*,5i,5i,y* " \
                            "--my-best-arg 1 --my-best-arg 2"
         self.assertEqual(command, expected_command)
 

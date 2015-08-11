@@ -12,14 +12,14 @@ from bcl2fastq.app import create_app
 class TestBcl2FastqHandlers(AsyncHTTPTestCase):
 
     API_BASE="/api/1.0"
-    MOCK_BCL2FASTQ_DICT =  {1: "y*,iiiiiiii,iiiiiiii,y*",
-                            2: "y*,iiiiii,n*,y*",
-                            3: "y*,iiiiii,n*,y*",
-                            4: "y*,iiiiiii,n*,y*",
-                            5: "y*,iiiiiii,n*,y*",
-                            6: "y*,iiiiiii,n*,y*",
-                            7: "y*,iiiiiii,n*,y*",
-                            8: "y*,iiiiiii,n*,y*",
+    MOCK_BCL2FASTQ_DICT =  {1: "y*,8i,8i,y*",
+                            2: "y*,6i,n*,y*",
+                            3: "y*,6i,n*,y*",
+                            4: "y*,7i,n*,y*",
+                            5: "y*,7i,n*,y*",
+                            6: "y*,7i,n*,y*",
+                            7: "y*,7i,n*,y*",
+                            8: "y*,7i,n*,y*",
                             }
 
     def get_app(self):
