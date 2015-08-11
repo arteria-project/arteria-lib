@@ -39,6 +39,9 @@ class Bcl2FastqConfig:
 
         self.barcode_mismatches = barcode_mismatches
         self.tiles = tiles
+        # TODO Ensure that this is included in any user facing documentation.
+        # Note that for the base mask the "--use_base_mask" must be included in the
+        # commandline passed. E.g. "--use_base_mask 1:y*,6i,6i, y* --use_base_mask y*,6i,6i, y* "
         self.use_base_mask = use_base_mask
         self.additional_args = additional_args
 
@@ -250,7 +253,9 @@ class BCL2Fastq2xRunner(BCL2FastqRunner):
             commandline_collection.append("--tiles " + self.config.tiles)
 
         if self.config.use_base_mask:
-            commandline_collection.append("--use_base_mask " + self.config.use_base_mask)
+            # Note that for the base mask the "--use_base_mask" must be included in the
+            # commandline passed.
+            commandline_collection.append(self.config.use_base_mask)
         else:
             lanes_and_base_mask = Bcl2FastqConfig.get_bases_mask_per_lane_from_samplesheet(self.config.samplesheet)
             for lane, base_mask in lanes_and_base_mask.iteritems():

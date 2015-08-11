@@ -83,14 +83,15 @@ class TestBCL2Fastq2xRunner(unittest.TestCase):
             output = "test/output",
             barcode_mismatches = "2",
             tiles="s1,s2,s3",
-            use_base_mask="Y*NN",
+            use_base_mask="--use_base_mask y*,6i,6i,y* --use_base_mask 1:y*,5i,5i,y*",
             additional_args="--my-best-arg 1 --my-best-arg 2")
 
         runner = BCL2Fastq2xRunner(config, "/bcl/binary/path")
         command = runner.construct_command()
         expected_command = "/bcl/binary/path --input-dir test/runfolder/Data/Intensities/BaseCalls " \
                            "--output-dir test/output --barcode-mismatches 2 " \
-                           "--tiles s1,s2,s3 --use_base_mask Y*NN " \
+                           "--tiles s1,s2,s3 " \
+                           "--use_base_mask y*,6i,6i,y* --use_base_mask 1:y*,5i,5i,y* " \
                            "--my-best-arg 1 --my-best-arg 2"
         self.assertEqual(command, expected_command)
 
