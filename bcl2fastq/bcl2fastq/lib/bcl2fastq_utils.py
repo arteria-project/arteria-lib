@@ -77,7 +77,7 @@ class Bcl2FastqConfig:
         :return a dict of the lane and base mask to use, e.g.:
                  { 1:"y*,iiiiiiii,iiiiiiii,y*" , 2:"y*,iiiiii,n*,y*  [etc] }
         """
-        def isDoubleIndex(idx):
+        def is_double_index(idx):
             return "-" in idx
 
         def construct_double_index_basemask(idx):
@@ -94,11 +94,11 @@ class Bcl2FastqConfig:
         lanes_and_indexes = samplesheet_df.loc[:,["Lane","Index"]]
         first_index_and_lane = lanes_and_indexes.groupby(lanes_and_indexes.Lane).first()
         indexes = first_index_and_lane["Index"].to_dict()
-        contains_double_index = True in map(isDoubleIndex, indexes.values())
+        contains_double_index = True in map(is_double_index, indexes.values())
 
         base_masks = {}
         for lane, read_index in indexes.iteritems():
-            if isDoubleIndex(read_index):
+            if is_double_index(read_index):
                 base_masks[lane] = construct_double_index_basemask(read_index.strip())
             else:
                 base_masks[lane] = construct_single_index_basemask(read_index.strip(), contains_double_index)
