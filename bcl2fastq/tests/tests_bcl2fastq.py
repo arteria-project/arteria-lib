@@ -1,12 +1,13 @@
 import unittest
 
 from bcl2fastq.lib.bcl2fastq_utils import *
+from lib.illumina import Samplesheet
 from test_utils import TestUtils
 
 class TestBcl2FastqConfig(unittest.TestCase):
 
     test_dir = os.path.dirname(os.path.realpath(__file__))
-    samplesheet_file = test_dir + "/sampledata/samplesheet_example.csv"
+    samplesheet_file = test_dir + "/sampledata/new_samplesheet_example.csv"
 
     def test_get_bcl2fastq_version_from_run_parameters(self):
         runfolder = TestBcl2FastqConfig.test_dir + "/sampledata/HiSeq-samples/2014-02_13_average_run"
@@ -29,17 +30,19 @@ class TestBcl2FastqConfig(unittest.TestCase):
                                7: "y*,i7n*,n*,y*",
                                8: "y*,i7n*,n*,y*",
                                }
+        samplesheet = Samplesheet(TestBcl2FastqConfig.samplesheet_file)
         actual_bases_mask = Bcl2FastqConfig.\
-            get_bases_mask_per_lane_from_samplesheet(TestBcl2FastqConfig.samplesheet_file, mock_read_index_lengths)
+            get_bases_mask_per_lane_from_samplesheet(samplesheet, mock_read_index_lengths)
         self.assertEqual(expected_bases_mask, actual_bases_mask)
 
     def test_get_bases_mask_per_lane_from_samplesheet_invalid_length_combo(self):
         # These are to short compared to the length indicated in the samplesheet
         mock_read_index_lengths = {2: 4, 3: 4}
+        samplesheet = Samplesheet(TestBcl2FastqConfig.samplesheet_file)
 
         with self.assertRaises(AssertionError):
             Bcl2FastqConfig.\
-                get_bases_mask_per_lane_from_samplesheet(TestBcl2FastqConfig.samplesheet_file, mock_read_index_lengths)
+                get_bases_mask_per_lane_from_samplesheet(samplesheet, mock_read_index_lengths)
 
 
 class TestBCL2FastqRunnerFactory(unittest.TestCase):

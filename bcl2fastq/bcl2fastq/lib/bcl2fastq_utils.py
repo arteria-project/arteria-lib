@@ -1,8 +1,9 @@
 import subprocess
 from bcl2fastq.lib.config import Config
 import os.path
-from pandas import read_csv
 from illuminate.metadata import InteropMetadata
+from itertools import groupby
+from lib.illumina import Samplesheet
 
 class Bcl2FastqConfig:
     """
@@ -21,7 +22,7 @@ class Bcl2FastqConfig:
                  nbr_of_cores=None):
 
         self.runfolder_input = runfolder_input
-        self.samplesheet = runfolder_input + "/SampleSheet.csv"
+        self.samplesheet_file = runfolder_input + "/SampleSheet.csv"
         self.base_calls_input = runfolder_input + "/Data/Intensities/BaseCalls"
 
         if bcl2fastq_version:
@@ -86,7 +87,7 @@ class Bcl2FastqConfig:
         return dict(indexes_and_lengths)
 
     @staticmethod
-    def get_bases_mask_per_lane_from_samplesheet(samplesheet_file, index_lengths):
+    def get_bases_mask_per_lane_from_samplesheet(samplesheet, index_lengths):
         """
         Create a bases-mask string per lane for based on the length of the index in the
         provided samplesheet. This assumes that all indexes within a lane have
@@ -96,14 +97,14 @@ class Bcl2FastqConfig:
         than the index length specified samplesheet, the base mask will be set to
         mask any extra bases.
 
-        :param samplesheet_file: samplesheet to fetch the index lengths from
+        :param samplesheet: samplesheet to fetch the index lengths from
         :param index_lengths: dict of index lengths (e.g. "{1: 7, 2: 8}"),
         normally parsed from run meta data.
         :return a dict of the lane and base mask to use, e.g.:
                  { 1:"y*,iiiiiiiin*,iiiiiiiin*,y*" , 2:"y*,iiiiii,n*,y*  [etc] }
         """
-        def is_double_index(idx):
-            return "-" in idx
+        def is_double_index(idxs):
+            return idxs[2]
 
         def pad_with_ignore(length_of_index_in_samplesheet, length_of_index_read):
             difference = length_of_index_read - length_of_index_in_samplesheet
@@ -113,10 +114,11 @@ class Bcl2FastqConfig:
             else:
                 return ""
 
-        def construct_double_index_basemask(idx):
-            (index1, index2) = idx.split("-")
+        def construct_double_index_basemask(index1, index2):
             index1_length = len(index1)
             index2_length = len(index2)
+            print index1_length
+            print index2_length
             return "y*,{0}{1}{2},{3}{4}{5},y*".format(
                 "i", index1_length, pad_with_ignore(index1_length, index_lengths[2]),
                 "i", index2_length, pad_with_ignore(index2_length, index_lengths[3]))
@@ -129,18 +131,21 @@ class Bcl2FastqConfig:
             else:
                 return "y*,{0}{1}{2},y*".format("i", idx_length, pad_with_ignore(idx_length, index_lengths[2]))
 
-        samplesheet_df = read_csv(samplesheet_file)
-        lanes_and_indexes = samplesheet_df.loc[:,["Lane","Index"]]
-        first_index_and_lane = lanes_and_indexes.groupby(lanes_and_indexes.Lane).first()
-        indexes = first_index_and_lane["Index"].to_dict()
+        def key_func(x):
+            return x.lane
+        sample_rows_sorted_by_lane = sorted(samplesheet.samples, key=key_func)
+        lanes_and_indexes = groupby(sample_rows_sorted_by_lane, key_func)
+
+        first_sample_in_each_lane = {k: next(v) for k, v in lanes_and_indexes}
+
         contains_double_index = len(index_lengths) > 1
 
         base_masks = {}
-        for lane, read_index in indexes.iteritems():
-            if is_double_index(read_index):
-                base_masks[lane] = construct_double_index_basemask(read_index.strip())
+        for lane, sample_row in first_sample_in_each_lane.iteritems():
+            if sample_row.index2:
+                base_masks[lane] = construct_double_index_basemask(sample_row.index1.strip(), sample_row.index2.strip())
             else:
-                base_masks[lane] = construct_single_index_basemask(read_index.strip(), contains_double_index)
+                base_masks[lane] = construct_single_index_basemask(sample_row.index1.strip(), contains_double_index)
 
         return base_masks
 
@@ -260,7 +265,7 @@ class BCL2Fastq2xRunner(BCL2FastqRunner):
         else:
             length_of_indexes = Bcl2FastqConfig.get_length_of_indexes(self.config.runfolder_input)
             lanes_and_base_mask = Bcl2FastqConfig.\
-                get_bases_mask_per_lane_from_samplesheet(self.config.samplesheet, length_of_indexes)
+                get_bases_mask_per_lane_from_samplesheet(self.config.samplesheet_file, length_of_indexes)
             for lane, base_mask in lanes_and_base_mask.iteritems():
                 commandline_collection.append("--use-bases-mask {0}:{1}".format(lane, base_mask))
 
@@ -287,7 +292,7 @@ class BCL2Fastq1xRunner(BCL2FastqRunner):
         commandline_collection = [
             "configureBclToFastq.pl",
             "--input-dir", self.config.base_calls_input,
-            "--sample-sheet", self.config.samplesheet,
+            "--sample-sheet", self.config.samplesheet_file,
             "--output-dir", self.config.output,
             "--fastq-cluster-count 0", # No upper-limit on number of clusters per output file.
             "--force" # overwrite output if it exists.
@@ -304,7 +309,7 @@ class BCL2Fastq1xRunner(BCL2FastqRunner):
         else:
             length_of_indexes = Bcl2FastqConfig.get_length_of_indexes(self.config.runfolder_input)
             lanes_and_base_mask = \
-                Bcl2FastqConfig.get_bases_mask_per_lane_from_samplesheet(self.config.samplesheet, length_of_indexes)
+                Bcl2FastqConfig.get_bases_mask_per_lane_from_samplesheet(self.config.samplesheet_file, length_of_indexes)
             base_masks_as_set = set(lanes_and_base_mask.values())
 
             assert len(base_masks_as_set) is 1, "For bcl2fastq 1.8.4 there is no support for " \
