@@ -1,5 +1,5 @@
 # Pull base image.
-FROM centos:6
+FROM arteria/frozendata:latest
 
 ######################################
 # Ensure we have python 2.7 installed
@@ -30,19 +30,21 @@ RUN curl https://raw.githubusercontent.com/pypa/pip/master/contrib/get-pip.py | 
 # Ensure we have pip installed
 ######################################
 
-RUN rpm -ivh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+#RUN rpm -ivh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 
 RUN yum -y install python-pip
 
 ######################################
-# Install bcl2fastq 2.16
+# Install bcl2fastq 2.17
 ######################################
-RUN yum install -y http://support.illumina.com/content/dam/illumina-support/documents/downloads/software/bcl2fastq/bcl2fastq2-v2.16.0.10-Linux-x86_64.rpm
+RUN yum install -y http://support.illumina.com/content/dam/illumina-support/documents/downloads/software/bcl2fastq/bcl2fastq2-v2.17.1.14-Linux-x86_64.rpm
 
 
 ######################################
 # Setup for bcl2fastq-ws
 ######################################
+
+RUN mkdir -p /var/log/bcl2fastq_logs/
 
 # Expose default bcl2fastq-ws port
 EXPOSE 8888
