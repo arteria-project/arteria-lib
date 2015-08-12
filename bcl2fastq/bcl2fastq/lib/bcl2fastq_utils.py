@@ -21,7 +21,7 @@ class Bcl2FastqConfig:
                  nbr_of_cores=None):
 
         self.runfolder_input = runfolder_input
-        self.samplesheet = runfolder_input + "/Samplesheet.csv"
+        self.samplesheet = runfolder_input + "/SampleSheet.csv"
         self.base_calls_input = runfolder_input + "/Data/Intensities/BaseCalls"
 
         if bcl2fastq_version:
@@ -53,12 +53,14 @@ class Bcl2FastqConfig:
             self.nbr_of_cores = multiprocessing.cpu_count()
 
     @staticmethod
-    def get_bcl2fastq_version_from_run_parameters(runfolder, config):
+    def get_bcl2fastq_version_from_run_parameters(runfolder, config=None):
         """
         Guess which bcl2fastq version to use based on the machine type
         specified in the runfolder meta data, and the corresponding
         mappings in the config file.
         :param runfolder: to get bcl2fastq version to use for
+        :param config: to use matching machine type to bcl2fastq versions (will be
+        loaded from default config if not set).
         :return the version of bcl2fastq to use.
         """
 
@@ -109,29 +111,29 @@ class Bcl2FastqConfig:
             if difference > 0:
                 return "n*"
             else:
-                ""
+                return ""
 
         def construct_double_index_basemask(idx):
             (index1, index2) = idx.split("-")
             index1_length = len(index1)
             index2_length = len(index2)
             return "y*,{0}{1}{2},{3}{4}{5},y*".format(
-                index1_length, "i", pad_with_ignore(index1_length, index_lengths[2]),
-                index2_length, "i", pad_with_ignore(index2_length, index_lengths[3]))
+                "i", index1_length, pad_with_ignore(index1_length, index_lengths[2]),
+                "i", index2_length, pad_with_ignore(index2_length, index_lengths[3]))
 
         def construct_single_index_basemask(idx, flowcell_has_double_idx):
             idx_length = len(idx)
             if flowcell_has_double_idx:
                 return "y*,{0}{1}{2},{3},y*".format(
-                    idx_length, "i", pad_with_ignore(idx_length, index_lengths[2]), "n*")
+                    "i", idx_length, pad_with_ignore(idx_length, index_lengths[2]), "n*")
             else:
-                return "y*,{0}{1}{2},y*".format(idx_length, "i", pad_with_ignore(idx_length, index_lengths[2]))
+                return "y*,{0}{1}{2},y*".format("i", idx_length, pad_with_ignore(idx_length, index_lengths[2]))
 
         samplesheet_df = read_csv(samplesheet_file)
         lanes_and_indexes = samplesheet_df.loc[:,["Lane","Index"]]
         first_index_and_lane = lanes_and_indexes.groupby(lanes_and_indexes.Lane).first()
         indexes = first_index_and_lane["Index"].to_dict()
-        contains_double_index = 2 in index_lengths
+        contains_double_index = len(index_lengths) > 1
 
         base_masks = {}
         for lane, read_index in indexes.iteritems():

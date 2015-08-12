@@ -19,17 +19,15 @@ class TestBcl2FastqConfig(unittest.TestCase):
         self.assertEqual(index_and_length, {2: 7})
 
     def test_get_bases_mask_per_lane_from_samplesheet(self):
-        #TODO Fix test to match that we might now have a read that uses the full
-        # lenght of the read.
         mock_read_index_lengths = {2: 9, 3: 9}
-        expected_bases_mask = {1: "y*,8in*,8in*,y*",
-                               2: "y*,6in*,n*,y*",
-                               3: "y*,6in*,n*,y*",
-                               4: "y*,7in*,n*,y*",
-                               5: "y*,7in*,n*,y*",
-                               6: "y*,7in*,n*,y*",
-                               7: "y*,7in*,n*,y*",
-                               8: "y*,7in*,n*,y*",
+        expected_bases_mask = {1: "y*,i8n*,i8n*,y*",
+                               2: "y*,i6n*,n*,y*",
+                               3: "y*,i6n*,n*,y*",
+                               4: "y*,i7n*,n*,y*",
+                               5: "y*,i7n*,n*,y*",
+                               6: "y*,i7n*,n*,y*",
+                               7: "y*,i7n*,n*,y*",
+                               8: "y*,i7n*,n*,y*",
                                }
         actual_bases_mask = Bcl2FastqConfig.\
             get_bases_mask_per_lane_from_samplesheet(TestBcl2FastqConfig.samplesheet_file, mock_read_index_lengths)
@@ -83,7 +81,7 @@ class TestBCL2Fastq2xRunner(unittest.TestCase):
             output = "test/output",
             barcode_mismatches = "2",
             tiles="s1,s2,s3",
-            use_base_mask="--use-bases-mask y*,6i,6i,y* --use-bases-mask 1:y*,5i,5i,y*",
+            use_base_mask="--use-bases-mask y*,i6,i6,y* --use-bases-mask 1:y*,i5,i5,y*",
             additional_args="--my-best-arg 1 --my-best-arg 2")
 
         runner = BCL2Fastq2xRunner(config, "/bcl/binary/path")
@@ -91,7 +89,7 @@ class TestBCL2Fastq2xRunner(unittest.TestCase):
         expected_command = "/bcl/binary/path --input-dir test/runfolder/Data/Intensities/BaseCalls " \
                            "--output-dir test/output --barcode-mismatches 2 " \
                            "--tiles s1,s2,s3 " \
-                           "--use-bases-mask y*,6i,6i,y* --use-bases-mask 1:y*,5i,5i,y* " \
+                           "--use-bases-mask y*,i6,i6,y* --use-bases-mask 1:y*,i5,i5,y* " \
                            "--my-best-arg 1 --my-best-arg 2"
         self.assertEqual(command, expected_command)
 
@@ -134,7 +132,7 @@ class TestBCL2Fastq1xRunner(unittest.TestCase):
         command = runner_1.construct_command()
         expected_command = "configureBclToFastq.pl " \
                            "--input-dir test/runfolder/Data/Intensities/BaseCalls " \
-                           "--sample-sheet test/runfolder/Samplesheet.csv " \
+                           "--sample-sheet test/runfolder/SampleSheet.csv " \
                            "--output-dir test/output " \
                            "--fastq-cluster-count 0 " \
                            "--force " \
