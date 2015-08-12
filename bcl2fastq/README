@@ -27,9 +27,11 @@ Install:
 
 Running integration tests in docker container (with a centos base):
 
-    sudo docker pull centos
-    sudo docker build -t bcl2fastq-ws .
-    sudo docker run -v $PWD:/bcl2fastq-ws -p 8888:8888 -t -i bcl2fastq-ws:latest /bin/bash
+    # NB: The container currently builds of an internal image.
+    #     We will work to find some publically available data,
+    #     to base of, but this is it for now.
+    docker build -t bcl2fastq-ws .
+    docker run -v $PWD:/bcl2fastq-ws -p 8888:8888 -t -i bcl2fastq-ws:latest /bin/bash
 
     # Once inside the docker container execute
     cd /bcl2fastq-ws/ && pip install -r requirements.txt && python2.7 setup.py install && python2.7 bcl2fastq/app.py --config config/bcl2fastq.integration_tests.config.yaml
