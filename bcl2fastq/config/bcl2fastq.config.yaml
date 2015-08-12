@@ -5,7 +5,7 @@
 # TODO Ensure all these mappings are correctly setup.
 bcl2fastq:
   versions:
-    2.17:
+    2.17.1:
       binary: bcl2fastq
       class_creation_function:  _get_bcl2fastq2x_runner
     2.15.2:
@@ -17,17 +17,17 @@ bcl2fastq:
 
 machine_type:
   HiSeq X:
-    bcl2fastq_version: 2.17
+    bcl2fastq_version: 2.17.1
   HiSeq 2500:
-    bcl2fastq_version: 2.17
+    bcl2fastq_version: 2.17.1
   HiSeq 2000:
-    bcl2fastq_version: 2.17
+    bcl2fastq_version: 2.17.1
   NextSeq 500:
-    bcl2fastq_version: 2.17
+    bcl2fastq_version: 2.17.1
   HiSeq 4000:
-    bcl2fastq_version: 2.17
+    bcl2fastq_version: 2.17.1
   MiSeq:
-    bcl2fastq_version: 2.17
+    bcl2fastq_version: 2.17.1
 
 
 runfolder_path: /data/biotank3/runfolders
