@@ -14,7 +14,7 @@ class SampleRow:
     samplesheet. Right only picking up the data field is
     supported.
     """
-    def __init__(self, sample_id, sample_name, index1, sample_project, lane=1, sample_plate=None,
+    def __init__(self, sample_id, sample_name, index1, sample_project, lane=None, sample_plate=None,
                  sample_well=None, index2=None, description=None):
         """
         Constructs the SampleRow, which shadows the information on each sequencing unit (lane, sample, tag, etc)
@@ -32,7 +32,7 @@ class SampleRow:
         :param description: a free text field containing additional info about the sample
         :return:
         """
-        self.lane = int(lane)
+        self.lane = int(lane) if lane else 1
         self.sample_id = str(sample_id)
         self.sample_name = str(sample_name)
         self.sample_plate = sample_plate
