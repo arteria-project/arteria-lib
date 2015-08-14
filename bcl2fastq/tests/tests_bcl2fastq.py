@@ -1,7 +1,7 @@
 import unittest
 
 from bcl2fastq.lib.bcl2fastq_utils import *
-from lib.illumina import Samplesheet
+from bcl2fastq.lib.illumina import Samplesheet
 from test_utils import TestUtils
 
 class TestBcl2FastqConfig(unittest.TestCase):

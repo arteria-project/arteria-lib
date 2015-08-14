@@ -2,7 +2,7 @@ import unittest
 import os
 from cStringIO import StringIO
 
-from lib.illumina import *
+from bcl2fastq.lib.illumina import *
 
 
 

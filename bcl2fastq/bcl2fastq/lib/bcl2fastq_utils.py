@@ -3,7 +3,6 @@ from bcl2fastq.lib.config import Config
 import os.path
 from illuminate.metadata import InteropMetadata
 from itertools import groupby
-from lib.illumina import Samplesheet
 
 class Bcl2FastqConfig:
     """
