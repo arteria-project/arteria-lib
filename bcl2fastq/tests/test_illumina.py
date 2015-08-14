@@ -18,13 +18,13 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
 """
 
     expected_samples = [
-        SampleRow(lane="1", sample_id="1", sample_name="1", sample_plate="",
-                  sample_well="", index1="CAGATC", index2="",
-                  sample_project="Dummy-Project",
+        SampleRow(lane="1", sample_id="1", sample_name="1",
+                  sample_well="", sample_plate="",
+                  index1="CAGATC", sample_project="Dummy-Project",
                   description="FRAGMENT_SIZE:387;FRAGMENT_LOWER:180;FRAGMENT_UPPER:580;LIBRARY_NAME:SX444_1"),
-        SampleRow(lane="1", sample_id="2", sample_name="2", sample_plate="",
-                  sample_well="", index1="ACTTGA", index2="",
-                  sample_project="Dummy-Project",
+        SampleRow(lane="1", sample_id="2", sample_name="2",
+                  sample_well="", sample_plate="",
+                  index1="ACTTGA", sample_project="Dummy-Project",
                   description="FRAGMENT_SIZE:387;FRAGMENT_LOWER:180;FRAGMENT_UPPER:580;LIBRARY_NAME:SX444_2")
     ]
 

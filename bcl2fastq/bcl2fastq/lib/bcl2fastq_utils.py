@@ -130,10 +130,10 @@ class Bcl2FastqConfig:
             else:
                 return "y*,{0}{1}{2},y*".format("i", idx_length, pad_with_ignore(idx_length, index_lengths[2]))
 
-        def key_func(x):
+        def by_lane(x):
             return x.lane
-        sample_rows_sorted_by_lane = sorted(samplesheet.samples, key=key_func)
-        lanes_and_indexes = groupby(sample_rows_sorted_by_lane, key_func)
+        sample_rows_sorted_by_lane = sorted(samplesheet.samples, key=by_lane)
+        lanes_and_indexes = groupby(sample_rows_sorted_by_lane, by_lane)
 
         first_sample_in_each_lane = {k: next(v) for k, v in lanes_and_indexes}
 
