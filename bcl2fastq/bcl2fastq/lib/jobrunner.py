@@ -1,4 +1,5 @@
-from localq import LocalQServer
+from localq import LocalQServer, Status
+from arteria.web.state import State as arteria_state
 
 class JobRunnerAdapter:
     """
@@ -55,6 +56,24 @@ class LocalQAdapter(JobRunnerAdapter):
     localq (a jobrunner which will schedule jobs on a single node).
     """
 
+    @staticmethod
+    def localq2arteria_status(status):
+
+        if status == Status.COMPLETED:
+            return arteria_state.DONE
+        elif status == Status.FAILED:
+            return arteria_state.ERROR
+        elif status == Status.PENDING:
+            return arteria_state.PENDING
+        elif status == Status.RUNNING:
+            return arteria_state.STARTED
+        elif status == Status.CANCELLED:
+            return arteria_state.CANCELLED
+        elif status == Status.NOT_FOUND:
+            return arteria_state.NONE
+        else:
+            return arteria_state.NONE
+
     # TODO Make configurable
     def __init__(self, nbr_of_cores, interval = 30, priority_method = "fifo"):
         self.nbr_of_cores = nbr_of_cores
@@ -71,7 +90,10 @@ class LocalQAdapter(JobRunnerAdapter):
         return self.server.stop_all_jobs()
 
     def status(self, job_id):
-        return self.server.get_status(job_id)
+        return LocalQAdapter.localq2arteria_status(self.server.get_status(job_id))
 
     def status_all(self):
-        return self.server.get_status_all()
+        jobs_and_status = {}
+        for k, v in self.server.get_status_all().iteritems():
+            jobs_and_status[k] = LocalQAdapter.localq2arteria_status(v)
+        return jobs_and_status
