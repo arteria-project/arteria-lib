@@ -38,5 +38,15 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         result = Samplesheet._read_samples(StringIO(TestSamplesheet.tiny_dummy_samplesheet_string))
         self.assertItemsEqual(result, TestSamplesheet.expected_samples)
 
+    def test_samplerow_defaults(self):
+        samplerow = SampleRow(sample_id="1", sample_name="1",
+                              index1="CAGATC", sample_project="Dummy-Project")
+        self.assertEqual(samplerow.lane, 1)
+        self.assertEqual(samplerow.sample_plate, None)
+        self.assertEqual(samplerow.sample_well, None)
+        self.assertEqual(samplerow.index2, None)
+        self.assertEqual(samplerow.description, None)
+
+
 
 

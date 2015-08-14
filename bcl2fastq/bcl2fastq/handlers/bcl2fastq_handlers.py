@@ -2,9 +2,16 @@
 from bcl2fastq.handlers.base_handler import BaseHandler
 from bcl2fastq.lib.jobrunner import LocalQAdapter
 from bcl2fastq.lib.bcl2fastq_utils import BCL2FastqRunnerFactory, Bcl2FastqConfig
-import json
 from bcl2fastq.lib.config import Config
+
+import json
 import logging
+
+from bcl2fastq.handlers.base_handler import BaseHandler
+from bcl2fastq.lib.jobrunner import LocalQAdapter
+from bcl2fastq.lib.bcl2fastq_utils import BCL2FastqRunnerFactory, Bcl2FastqConfig
+from bcl2fastq.lib.config import Config
+from arteria.web.state import State
 
 log = logging.getLogger(__name__)
 
@@ -153,7 +160,7 @@ class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
                 stderr=log_file)
 
             status_end_point = self.reverse_url("status", job_id)
-            response_data = {"job_id": job_id, "status_endpoint": status_end_point}
+            response_data = {"job_id": job_id, "link": status_end_point, "state": State.STARTED }
 
             self.set_status(202, reason="started processing")
             self.write_json(response_data)

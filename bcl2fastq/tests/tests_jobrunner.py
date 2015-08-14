@@ -1,7 +1,7 @@
 
 import unittest
 from bcl2fastq.lib.jobrunner import LocalQAdapter
-from localq.Status import Status
+from arteria.web.state import State
 import time
 
 class TestLocalQAdapter(unittest.TestCase):
@@ -39,12 +39,12 @@ class TestLocalQAdapter(unittest.TestCase):
         job_id = self.server_adapter.start(self.echo, 1, "/tmp")
         time.sleep(2)
         result = self.server_adapter.status(job_id)
-        self.assertEqual(result, Status.COMPLETED)
+        self.assertEqual(result, State.DONE)
 
     def test_status_all(self):
         job_id_1 = self.server_adapter.start(self.echo, 1, "/tmp")
         job_id_2 = self.server_adapter.start(self.echo, 1, "/tmp")
         result = self.server_adapter.status_all()
-        self.assertEqual(result, {job_id_1: Status.PENDING, job_id_2: Status.PENDING})
+        self.assertEqual(result, {job_id_1: State.PENDING, job_id_2: State.PENDING})
 
 
