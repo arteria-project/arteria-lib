@@ -139,8 +139,9 @@ class Wrapper(object):
                                         stderr=subprocess.PIPE)
 
             self.info.set_started(proc)
-            self.logger.info("{0} started for {1}.".
-                             format(type(self), self.info.runfolder))
+            self.logger.info("{0} started for {1} with: {2}".
+                             format(type(self), self.info.runfolder,
+                                    exec_string))
         except (OSError, ValueError), err:
             self.logger.error("An error occurred in Wrapper for {0}: {1}".
                               format(self.info.runfolder, err))
@@ -277,26 +278,29 @@ class ProcessService(object):
         returncode = proc.poll()
 
         if returncode < 0 and returncode is not None:
-            wrapper.info.msg = ("Process was terminated with"
+            wrapper.info.msg = ("Process was terminated with "
                                 "Unix code {0}.").format(returncode)
             wrapper.info.state = ProcessInfo.STATE_ERROR
         elif returncode == 0 and returncode is not None:
-            out, err = proc.communicate()
-            wrapper.info.msg = ("Process was completed successfully with"
-                                "return code ") + str(returncode) + "."
+            # We can't communicate with a dead process; became obvious
+            # within Docker testing
+            if wrapper.info.state is not ProcessInfo.STATE_DONE:
+                out, err = proc.communicate()
+                wrapper.info.msg = ("Process was completed successfully with "
+                                    "return code ") + str(returncode) + "."
 
-            if out is None:
-                out = "(no txt msg)"
+                if out is None:
+                    out = "(no txt msg)"
 
-            debugmsg = "Message was: " + out
-            wrapper.info.state = ProcessInfo.STATE_DONE
+                debugmsg = "Message was: " + out
+                wrapper.info.state = ProcessInfo.STATE_DONE
         elif returncode > 0:
             try:
                 # We can only communicate with the process if it hasn't been
                 # killed off.
                 if wrapper.info.state is not ProcessInfo.STATE_ERROR:
                     out, err = proc.communicate()
-                    wrapper.info.msg = ("Process was completed successfully,"
+                    wrapper.info.msg = ("Process was completed successfully, "
                                         "but encounted an error, with return "
                                         "code {0}.").format(returncode)
                     debugmsg = "Message was: " + err

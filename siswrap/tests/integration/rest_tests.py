@@ -12,7 +12,7 @@ from siswrap.siswrap import ProcessService
 
 
 class TestRestApi(object):
-    BASE_URL = "http://testarteria1:10900/api/1.0"
+    BASE_URL = "http://localhost:10900/api/1.0"
     REPORT_URL = BASE_URL + "/report"
     QC_URL = BASE_URL + "/qc"
 
@@ -88,7 +88,7 @@ class TestRestApi(object):
         resp = requests.get(link)
         assert resp.status_code == 200 or resp.status_code == 500
 
-    def check_all_statuses(self, handler, monkeypatch):
+    def check_all_statuses(self, handler, sleep_time, monkeypatch):
         runfolders = [self.RUNFOLDER, self.RUNFOLDER]
         mypids = []
 
@@ -122,58 +122,59 @@ class TestRestApi(object):
         assert counter == len(runfolders)
 
         # Sleep before we check again
-        time.sleep(60)
+        if sleep_time <= 60:
+            time.sleep(sleep_time)
 
-        outerpayload = jsonpickle.decode(resp.text)
+            outerpayload = jsonpickle.decode(resp.text)
 
-        for idx, run in enumerate(outerpayload):
-            if run["pid"] in mypids and run["state"] == "started":
-                # Sleep before we check again
-                # time.sleep(60)
+            for idx, run in enumerate(outerpayload):
+                if run["pid"] in mypids and run["state"] == "started":
+                    # Sleep before we check again
+                    # time.sleep(60)
 
-                resp = requests.get(self.get_url(handler) + "/status/")
-                assert resp.status_code == 200
-                innerpayload = jsonpickle.decode(resp.text)
-                innerpayloadpids = []
+                    resp = requests.get(self.get_url(handler) + "/status/")
+                    assert resp.status_code == 200
+                    innerpayload = jsonpickle.decode(resp.text)
+                    innerpayloadpids = []
 
-                for innerrun in innerpayload:
-                    # assert innerrun.get("pid") in mypids
-                    innerpayloadpids.append(innerrun.get("pid"))
-                    assert innerrun.get("state") in ["done", "error"]
+                    for innerrun in innerpayload:
+                        # assert innerrun.get("pid") in mypids
+                        innerpayloadpids.append(innerrun.get("pid"))
+                        assert innerrun.get("state") in ["done", "error"]
 
-                # FIXME: Need to refactor this test into more managable parts
-                # for pid in mypids:
-                #    assert pid in innerpayloadpids
+                    # FIXME: Need to refactor this test into more managable parts
+                    # for pid in mypids:
+                    #    assert pid in innerpayloadpids
 
-                # Request detailed status
-                resp = requests.get(self.get_url(handler) + "/status/" +
-                                    str(run["pid"]))
-                assert resp.status_code == 200
-                innerpayload = jsonpickle.decode(resp.text)
-                assert innerpayload.get("state") == "done"
+                    # Request detailed status
+                    resp = requests.get(self.get_url(handler) + "/status/" +
+                                        str(run["pid"]))
+                    assert resp.status_code == 200
+                    innerpayload = jsonpickle.decode(resp.text)
+                    assert innerpayload.get("state") == "done"
 
-                # And if we check the detailed status yet again then the
-                # process shouldn't still exist.
-                resp = requests.get(self.get_url(handler) + "/status/" +
-                                    str(run["pid"]))
-                assert resp.status_code == 500
-                innerpayload = jsonpickle.decode(resp.text)
-                assert innerpayload.get("state") == "none"
-                assert self.is_number(innerpayload.get("pid")) is True
-            elif run["state"] == "error":
-                resp = requests.get(self.get_url(handler) + "/status/" +
-                                    str(run["pid"]))
-                assert resp.status_code == 500
-                innerpayload = jsonpickle.decode(resp.text)
-                assert innerpayload.get("state") == "none"
+                    # And if we check the detailed status yet again then the
+                    # process shouldn't still exist.
+                    resp = requests.get(self.get_url(handler) + "/status/" +
+                                        str(run["pid"]))
+                    assert resp.status_code == 500
+                    innerpayload = jsonpickle.decode(resp.text)
+                    assert innerpayload.get("state") == "none"
+                    assert self.is_number(innerpayload.get("pid")) is True
+                elif run["state"] == "error":
+                    resp = requests.get(self.get_url(handler) + "/status/" +
+                                        str(run["pid"]))
+                    assert resp.status_code == 200
+                    innerpayload = jsonpickle.decode(resp.text)
+                    assert innerpayload.get("state") == "error"
 
-        # Now our pids shouldn't exist in the global status
-        resp = requests.get(self.get_url(handler) + "/status/")
-        outerpayload = jsonpickle.decode(resp.text)
-        for run in outerpayload:
-            assert run.get("pid") not in mypids
+            # Now our pids shouldn't exist in the global status
+            resp = requests.get(self.get_url(handler) + "/status/")
+            outerpayload = jsonpickle.decode(resp.text)
+            for run in outerpayload:
+                assert run.get("pid") not in mypids
 
-    def check_a_status(self, handler, monkeypatch):
+    def check_a_status(self, handler, sleep_time, monkeypatch):
         runfolder = self.RUNFOLDER
 
         # Clear the process queue
@@ -198,20 +199,26 @@ class TestRestApi(object):
             self.conf.get_setting("runfolder_root") + runfolder
         assert self.is_number(payload.get("pid")) is True
 
-        # We want to make sure that the process has finished.
-        time.sleep(70)
+        # We want to make sure that the process has finished, or still ongoing
+        if sleep_time <= 60:
+            time.sleep(sleep_time)
 
-        # And now we check it again and should get a done response
-        resp = requests.get(self.get_url(handler) + "/status/" + pid)
-        assert resp.status_code == 200
-        payload = jsonpickle.decode(resp.text)
-        assert payload.get("state") == "done"
+            # And now we check it again and should get a done response
+            resp = requests.get(self.get_url(handler) + "/status/" + pid)
+            assert resp.status_code == 200
+            payload = jsonpickle.decode(resp.text)
+            assert payload.get("state") == "done"
 
-        # Now when we have checked it again the process should be gone
-        resp = requests.get(self.get_url(handler) + "/status/" + pid)
-        assert resp.status_code == 500
-        payload = jsonpickle.decode(resp.text)
-        assert payload.get("state") == "none"
+            # Now when we have checked it again the process should be gone
+            resp = requests.get(self.get_url(handler) + "/status/" + pid)
+            assert resp.status_code == 500
+            payload = jsonpickle.decode(resp.text)
+            assert payload.get("state") == "none"
+        else:
+            resp = requests.get(self.get_url(handler) + "/status/" + pid)
+            assert resp.status_code == 200
+            payload = jsonpickle.decode(resp.text)
+            assert payload.get("state") == "started"
 
     def test_basic_smoke_test(self):
         resp = requests.get(self.BASE_URL)
@@ -224,16 +231,16 @@ class TestRestApi(object):
         self.start_handler("qc", monkeypatch)
 
     def test_can_check_a_report_status(self, monkeypatch):
-        self.check_a_status("report", monkeypatch)
+        self.check_a_status("report", 15*60, monkeypatch)
 
     def test_can_check_a_qc_status(self, monkeypatch):
-        self.check_a_status("qc", monkeypatch)
+        self.check_a_status("qc", 10, monkeypatch)
 
     def test_can_check_all_report_statuses(self, monkeypatch):
-        self.check_all_statuses("report", monkeypatch)
+        self.check_all_statuses("report", 15*60, monkeypatch)
 
     def test_can_check_all_qc_statuses(self, monkeypatch):
-        self.check_all_statuses("qc", monkeypatch)
+        self.check_all_statuses("qc", 10, monkeypatch)
 
 if __name__ == '__main__':
     pytest.main()

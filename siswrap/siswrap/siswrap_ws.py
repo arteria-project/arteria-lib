@@ -172,16 +172,16 @@ class ApiHelpHandler(BaseHandler):
         doc = [
             ApiHelpEntry("/qc/run/runfolder",
                          "Run Sisyphus quality control for runfolder"),
-            ApiHelpEntry("/qc/status/", "Check status of all running Sisyphus \
-                         quality control jobs"),
-            ApiHelpEntry("/qc/status/run_id", "Check status of a specific \
-                         Sisyphus quality control job"),
-            ApiHelpEntry("/report/run/runfolder", "Start Sisyphus quick \
-                         report for runfolder"),
-            ApiHelpEntry("/report/status/", "Check status of all Sisyphus \
-                         quick reports"),
-            ApiHelpEntry("/report/status/run_id", "Check status of Sisyphus \
-                         quick report with run_id")
+            ApiHelpEntry("/qc/status/",
+                         "Check status of all running Sisyphus quality control jobs"),
+            ApiHelpEntry("/qc/status/run_id",
+                         "Check status of a specific Sisyphus quality control job"),
+            ApiHelpEntry("/report/run/runfolder",
+                         "Start Sisyphus quick report for runfolder"),
+            ApiHelpEntry("/report/status/",
+                         "Check status of all Sisyphus quick reports"),
+            ApiHelpEntry("/report/status/run_id",
+                         "Check status of Sisyphus quick report with run_id")
         ]
         self.write_object(doc)
 
