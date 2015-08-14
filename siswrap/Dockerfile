@@ -5,9 +5,6 @@
 FROM arteria/dependencies:1
 LABEL Description="Test image for siswrap service" Version="0.1"
 
-# We might want to do this in a layer higher up; or add it
-RUN mkdir -pv /srv/samplesheet/processing/ && mkdir /var/log/arteria
-
 # siswrap service dependencies
 RUN yum install -y dos2unix gnuplot PyXML ImageMagick libxslt-devel libxml2-devel libxml2-devel ncurses-devel libtiff-devel bzip2-devel zlib2-devel perl-XML-LibXML perl-XML-LibXML-Common perl-XML-NamespaceSupport perl-XML-SAX perl-XML-Simple zlib-devel perl-Archive-Zip perl-CPAN git perl-PDL perl-PerlIO-gzip
 
