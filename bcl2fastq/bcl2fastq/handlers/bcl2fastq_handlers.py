@@ -153,7 +153,7 @@ class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
                 stderr=log_file)
 
             status_end_point = self.reverse_url("status", job_id)
-            response_data = {"job_id": job_id, "status_endpoint": status_end_point}
+            response_data = {"job_id": job_id, "link": status_end_point, "state": "STARTED"}
 
             self.set_status(202, reason="started processing")
             self.write_json(response_data)
