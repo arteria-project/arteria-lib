@@ -1,8 +1,11 @@
 import subprocess
-from bcl2fastq.lib.config import Config
 import os.path
-from illuminate.metadata import InteropMetadata
 from itertools import groupby
+
+from illuminate.metadata import InteropMetadata
+
+from bcl2fastq.lib.config import Config
+from bcl2fastq.lib.illumina import Samplesheet
 
 class Bcl2FastqConfig:
     """
@@ -263,8 +266,9 @@ class BCL2Fastq2xRunner(BCL2FastqRunner):
             commandline_collection.append(self.config.use_base_mask)
         else:
             length_of_indexes = Bcl2FastqConfig.get_length_of_indexes(self.config.runfolder_input)
+            samplesheet = Samplesheet(self.config.samplesheet_file)
             lanes_and_base_mask = Bcl2FastqConfig.\
-                get_bases_mask_per_lane_from_samplesheet(self.config.samplesheet_file, length_of_indexes)
+                get_bases_mask_per_lane_from_samplesheet(samplesheet, length_of_indexes)
             for lane, base_mask in lanes_and_base_mask.iteritems():
                 commandline_collection.append("--use-bases-mask {0}:{1}".format(lane, base_mask))
 
@@ -307,8 +311,9 @@ class BCL2Fastq1xRunner(BCL2FastqRunner):
             commandline_collection.append("--use_bases_mask " + self.config.use_base_mask)
         else:
             length_of_indexes = Bcl2FastqConfig.get_length_of_indexes(self.config.runfolder_input)
+            samplesheet = Samplesheet(self.config.samplesheet_file)
             lanes_and_base_mask = \
-                Bcl2FastqConfig.get_bases_mask_per_lane_from_samplesheet(self.config.samplesheet_file, length_of_indexes)
+                Bcl2FastqConfig.get_bases_mask_per_lane_from_samplesheet(samplesheet, length_of_indexes)
             base_masks_as_set = set(lanes_and_base_mask.values())
 
             assert len(base_masks_as_set) is 1, "For bcl2fastq 1.8.4 there is no support for " \

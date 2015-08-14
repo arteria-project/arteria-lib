@@ -36,12 +36,21 @@ class TestBcl2FastqHandlers(AsyncHTTPTestCase):
         self.assertEqual(response.code, 500)
 
     def test_start(self):
+        from bcl2fastq.lib.bcl2fastq_utils import BCL2FastqRunner
+
+        class FakeRunner(BCL2FastqRunner):
+            def __init__(self):
+                pass
+
+            def construct_command(self):
+                return "fake_bcl_command"
+
         # Use mock to ensure that this will run without
         # creating the runfolder.
         with mock.patch.object(Config, 'load_config', return_value=TestUtils.DUMMY_CONFIG), \
              mock.patch.object(os.path, 'isdir', return_value=True), \
              mock.patch.object(Bcl2FastqConfig, 'get_bcl2fastq_version_from_run_parameters', return_value="2.15.2"), \
-             mock.patch.object(Bcl2FastqConfig, 'get_bases_mask_per_lane_from_samplesheet', return_value=self.MOCK_BCL2FASTQ_DICT):
+             mock.patch.object(BCL2FastqRunnerFactory, "create_bcl2fastq_runner", return_value=FakeRunner()):
 
             body = {"runfolder_input": "/path/to/runfolder"}
             response = self.fetch(self.API_BASE + "/start/150415_D00457_0091_AC6281ANXX", method="POST", body=json_encode(body))
