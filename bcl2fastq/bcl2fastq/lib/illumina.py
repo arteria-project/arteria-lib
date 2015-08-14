@@ -42,33 +42,13 @@ class Samplesheet:
             assert len(lines_with_data) == 1, "The wasn't strictly one line in samplesheet with line '[Data]'"
             return lines_with_data[0][0]
 
-        # REVIEW If anyone has a better idea than this I'd be happy to head it.
-        # The setup for this now is not pretty!
-        # The Reason that this is done in this way is that not all fields
-        # will exist depending on the type of run. In particular the "Lane" column
-        # is not available in MiSeq samplesheets. /JD 20150813
         def row_to_sample_row(index_and_row):
             row = index_and_row[1]
-            
-            def single_index_row_to_sample_row(this_row, lane=None):
-                  return SampleRow(lane or this_row["Lane"], this_row["Sample_ID"], this_row["Sample_Name"],
-                                     this_row["Sample_Plate"], this_row["Sample_Well"],
-                                     this_row["index"], "", this_row["Sample_Project"], this_row["Description"])
-
-            def double_index_row_to_sample_row(this_row, lane=None):
-                    return SampleRow(lane or this_row["Lane"], this_row["Sample_ID"], this_row["Sample_Name"],
-                                     this_row["Sample_Plate"], this_row["Sample_Well"],
-                                     this_row["index"], this_row["index2"], this_row["Sample_Project"], this_row["Description"])
-            if "Lane" in row:
-                if "index2" in row:
-                    return double_index_row_to_sample_row(row)
-                else:
-                    return single_index_row_to_sample_row(row)
-            else:
-                if "index2" in row:
-                    return double_index_row_to_sample_row(row, 1)
-                else:
-                    return single_index_row_to_sample_row(row, 1)
+            default_lane = 1 # MiSeq samplesheets do not contain any lane information - so we will default this to 1.
+            default_index2 = ""
+            return SampleRow(row.get("Lane", default_lane), row["Sample_ID"], row["Sample_Name"],
+                             row["Sample_Plate"], row["Sample_Well"],
+                             row["index"], row.get("index2", default_index2), row["Sample_Project"], row["Description"])
 
         lines_to_skip = find_data_line() + 1
         # Ensure that pointer is at beginning of file again.
