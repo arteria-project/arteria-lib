@@ -58,7 +58,7 @@ class TestBcl2FastqHandlers(AsyncHTTPTestCase):
             self.assertEqual(response.code, 202)
             self.assertEqual(json.loads(response.body)["job_id"], 1)
             self.assertEqual(json.loads(response.body)["link"], "/api/1.0/status/1")
-            self.assertEqual(json.loads(response.body)["state"], "STARTED")
+            self.assertEqual(json.loads(response.body)["state"], "started")
 
     def test_status_with_id(self):
         response = self.fetch(self.API_BASE + "/status/1123456546", method="GET")
