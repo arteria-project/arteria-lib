@@ -43,8 +43,14 @@ chown -R $user:$user $installpath
 # PyXML?
 if ! test -f $depsinstalled ; then
     echo "Installing dependencies for Sisyphus"
-    apt-get update
-    apt-get -y install dos2unix gnuplot imagemagick libxslt1-dev libxml2-dev ncurses-dev libtiff-dev libbz2-dev zlib1g-dev build-essential libexpat1-dev pdl libperlio-gzip-perl git
+
+    if test -f /etc/redhat-release ; then
+        yum install -y dos2unix gnuplot PyXML ImageMagick libxslt-devel libxml2-devel libxml2-devel ncurses-devel libtiff-devel bzip2-devel zlib2-devel perl-XML-LibXML perl-XML-LibXML-Common perl-XML-NamespaceSupport perl-XML-SAX perl-XML-Simple zlib-devel perl-Archive-Zip perl-CPAN git perl-PDL perl-PerlIO-gzip
+    else
+        apt-get update
+        apt-get -y install dos2unix gnuplot imagemagick libxslt1-dev libxml2-dev ncurses-dev libtiff-dev libbz2-dev zlib1g-dev build-essential libexpat1-dev pdl libperlio-gzip-perl git
+    fi
+
     curl -L http://cpanmin.us | perl - App::cpanminus
     cpanm XML::LibXML
     #cpanm XML::LibXML::Common
@@ -54,6 +60,7 @@ if ! test -f $depsinstalled ; then
     cpanm Archive::Zip
     cpanm File::NFSLock
     touch $depsinstalled
+
 fi
 
 echo "Installing Sisyphus from github repo"
@@ -63,7 +70,10 @@ if test -d $sisdest ; then
     rm -rf $sisdest
 fi
 cd $depspath && git clone https://github.com/Molmed/sisyphus.git
-
+# Temporary copy of QC criteria; atm the QCWrapper tries to copy this
+# into the runfolder; perhaps we should have something else do this.
+mkdir -p /srv/qc_config/
+cp $depspath/sisyphus/sisyphus_qc.xml /srv/qc_config/sisyphus_qc.xml
 
 # activate the virtualenv
 echo "Switching to the '$installpath' virtualenv"
@@ -92,9 +102,9 @@ fi
 
 if [ "$type" == "dev" ]; then
     echo "Add siswrap-ws-test for easy integration testing"
-    testbin="/usr/bin/siswrap-ws-test"
+    testbin="/usr/local/bin/siswrap-ws-test"
     echo "source $installpath/bin/activate" > $testbin
-    echo "py.test $source/tests/integration" >> $testbin 
+    echo "py.test $source/tests/integration/*.py" >> $testbin
 
     chmod +x $testbin
 
