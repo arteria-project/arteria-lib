@@ -92,7 +92,9 @@ class RouteService:
             ...
         """
         route_infos = list(self._get_route_infos(tornado_routes, base_url))
-        grouped = itertools.groupby(route_infos, lambda entry: entry.route)
+        by_route = lambda entry: entry.route
+        route_infos_sorted = sorted(route_infos, key=by_route)
+        grouped = itertools.groupby(route_infos_sorted, key=by_route)
         routes = []
         for key, groups in grouped:
             route_info = {"route": key}
