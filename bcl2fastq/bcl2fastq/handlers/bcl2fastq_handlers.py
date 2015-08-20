@@ -142,6 +142,7 @@ class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
         """
 
         try:
+            #TODO Make sure this works even if body is not set! /JD 20150820
             runfolder_config = self.create_config_from_request(runfolder, json.loads(self.request.body))
 
             cmd = self.bcl2fastq_cmd_generation_service().\
