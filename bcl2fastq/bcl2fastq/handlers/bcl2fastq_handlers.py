@@ -142,6 +142,7 @@ class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
         """
 
         try:
+            #TODO Make sure this works even if body is not set! /JD 20150820
             runfolder_config = self.create_config_from_request(runfolder, json.loads(self.request.body))
 
             cmd = self.bcl2fastq_cmd_generation_service().\
@@ -159,8 +160,12 @@ class StartHandler(BaseHandler, Bcl2FastqServiceMixin):
                 stdout=log_file,
                 stderr=log_file)
 
-            status_end_point = self.reverse_url("status", job_id)
-            response_data = {"job_id": job_id, "link": status_end_point, "state": State.STARTED }
+            status_end_point = "{0}://{1}{2}".format(
+                self.request.protocol,
+                self.request.host,
+                self.reverse_url("status", job_id))
+
+            response_data = {"job_id": job_id, "link": status_end_point, "state": State.STARTED}
 
             self.set_status(202, reason="started processing")
             self.write_json(response_data)
@@ -181,9 +186,13 @@ class StatusHandler(BaseHandler, Bcl2FastqServiceMixin):
         """
 
         if job_id:
-            status = self.runner_service().status(job_id)
+            status = {"state": self.runner_service().status(job_id)}
         else:
-            status = self.runner_service().status_all()
+            all_status = self.runner_service().status_all()
+            status_dict = {}
+            for k,v in all_status.iteritems():
+                status_dict[k] = {"state": v}
+            status = status_dict
 
         self.write_json(status)
 
